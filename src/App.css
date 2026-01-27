@@ -1,0 +1,2051 @@
+/* =========================================================
+   UI LEVEL THEMES (Simple / Medium / Complex)
+   + Nusantara ornament via inline SVG (no external asset)
+   ========================================================= */
+
+:root{
+  --ui: medium;
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --font-display: var(--font-ui);
+
+  --bg: #f2e3cc;
+  --surface: #fff7ea;
+  --surface-2: #f6ead6;
+  --border: #e3cfb5;
+
+  --text: #2b241b;
+  --muted: #6b5a45;
+
+  --accent: #c86b2f;
+  --accent-2: #2f6f61;
+  --accent-3: #d6a84f;
+
+  --danger: #b63a2b;
+  --success: #247b4b;
+
+  --radius: 26px;
+  --radius-sm: 18px;
+  --shadow: 0 8px 18px rgba(35, 20, 5, 0.10);
+  --shadow-strong: 0 14px 28px rgba(20, 10, 2, 0.18);
+
+  /* subtle default pattern */
+  --pattern: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.03) 0px,
+    rgba(0,0,0,0.03) 6px,
+    rgba(255,255,255,0.00) 6px,
+    rgba(255,255,255,0.00) 14px
+  );
+
+  /* Nusantara ornament (inline SVG) — subtle by default */
+  --ornament: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='70' viewBox='0 0 280 70'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='.08' stroke-width='2'%3E%3Cpath d='M10 35c25-25 55-25 80 0'/%3E%3Cpath d='M10 35c25 25 55 25 80 0'/%3E%3Cpath d='M95 35c25-25 55-25 80 0'/%3E%3Cpath d='M95 35c25 25 55 25 80 0'/%3E%3Cpath d='M180 35c25-25 55-25 80 0'/%3E%3Cpath d='M180 35c25 25 55 25 80 0'/%3E%3C/g%3E%3C/svg%3E");
+
+  --btn-bg: #fff2df;
+  --btn-border: rgba(0,0,0,0.08);
+  --btn-text: var(--text);
+  --btn-shadow: 0 7px 0 rgba(0, 0, 0, 0.14);
+
+  --primary-bg: #d8902d;
+  --primary-border: rgba(0,0,0,0.14);
+  --primary-text: #2b241b;
+
+  --chip-bg: rgba(255, 255, 255, 0.9);
+  --chip-border: rgba(0, 0, 0, 0.08);
+  --chip-text: var(--text);
+
+  --panel-bg: #fbf2e6;
+  --panel-border: rgba(0, 0, 0, 0.06);
+  --tile-bg: #f3e7dc;
+  --tile-border: rgba(0, 0, 0, 0.08);
+  --tile-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  --panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+  --inner-bg: rgba(255, 255, 255, 0.6);
+}
+
+/* SIMPLE */
+:root[data-ui="simple"]{
+  --ui: simple;
+
+  --bg: #fbf6ee;
+  --surface: #ffffff;
+  --surface-2: #f3f1ec;
+  --border: #e7e1d8;
+
+  --text: #1f1f1f;
+  --muted: #6b6b6b;
+
+  --accent: #7a5a3a;
+  --accent-2: #5b6b5f;
+  --accent-3: #c9b08c;
+
+  --radius: 22px;
+  --radius-sm: 16px;
+  --shadow: 0 6px 14px rgba(20, 20, 20, 0.08);
+  --shadow-strong: 0 10px 22px rgba(20, 20, 20, 0.12);
+
+  --pattern: none;
+  --ornament: none;
+
+  --btn-bg: #e7e7e7;
+  --btn-border: #d2d2d2;
+  --btn-text: #1f1f1f;
+  --btn-shadow: none;
+
+  --primary-bg: #d2d2d2;
+  --primary-border: #c6c6c6;
+  --primary-text: #1f1f1f;
+
+  --chip-bg: #ffffff;
+  --chip-border: #e7e1d8;
+  --chip-text: #1f1f1f;
+}
+
+/* MEDIUM */
+:root[data-ui="medium"]{
+  --ui: medium;
+}
+
+/* COMPLEX */
+:root[data-ui="complex"]{
+  --ui: complex;
+
+  --bg: #071a1f;
+  --surface: #2b0f12;
+  --surface-2: #102a2f;
+  --border: rgba(214, 168, 79, 0.55);
+
+  --text: #f6e7c8;
+  --muted: rgba(246, 231, 200, 0.75);
+
+  --accent: #d6a84f;
+  --accent-2: #3aa6a1;
+  --accent-3: #c86b2f;
+
+  --danger: #ff6b5b;
+  --success: #49d08a;
+
+  --radius: 28px;
+  --radius-sm: 18px;
+  --shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  --shadow-strong: 0 18px 40px rgba(0, 0, 0, 0.55);
+
+  /* richer pattern */
+  --pattern:
+    radial-gradient(circle at 30% 20%, rgba(214,168,79,0.14), transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(58,166,161,0.12), transparent 60%);
+
+  /* ornament stronger (still subtle) */
+  --ornament: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='90' viewBox='0 0 320 90'%3E%3Cg fill='none' stroke='%23d6a84f' stroke-opacity='.22' stroke-width='2'%3E%3Cpath d='M10 45c30-30 70-30 100 0'/%3E%3Cpath d='M10 45c30 30 70 30 100 0'/%3E%3Cpath d='M120 45c30-30 70-30 100 0'/%3E%3Cpath d='M120 45c30 30 70 30 100 0'/%3E%3Cpath d='M230 45c30-30 70-30 100 0'/%3E%3Cpath d='M230 45c30 30 70 30 100 0'/%3E%3C/g%3E%3C/svg%3E");
+
+  --btn-bg: rgba(16, 42, 47, 0.9);
+  --btn-border: rgba(214, 168, 79, 0.55);
+  --btn-text: var(--text);
+  --btn-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
+
+  --primary-bg: rgba(214, 168, 79, 0.95);
+  --primary-border: rgba(0,0,0,0.25);
+  --primary-text: #22170d;
+
+  --chip-bg: rgba(16, 42, 47, 0.85);
+  --chip-border: rgba(214, 168, 79, 0.40);
+  --chip-text: var(--text);
+
+  color-scheme: dark;
+
+  /* ✅ Learn panel colors in complex (biar kartu putih tidak "silau/tidak kebaca") */
+  --panel-bg: rgba(16, 42, 47, 0.78);
+  --panel-border: rgba(214,168,79,0.25);
+  --tile-bg: rgba(43,15,18,0.70);
+  --tile-border: rgba(214,168,79,0.22);
+  --tile-shadow: 0 14px 30px rgba(0,0,0,0.45);
+  --panel-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  --inner-bg: rgba(255, 255, 255, 0.06);
+}
+
+/* global */
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+#root{
+  max-width:none;
+  margin:0;
+  padding:0;
+  text-align:initial;
+}
+
+:root[data-switching="1"] *{ transition:none !important; }
+:root[data-switching="1"] .ui-topbar{ backdrop-filter:none !important; }
+
+.ui-topbar{
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.ui-topbar__inner{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.ui-topbar__right{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+}
+
+/* ===== unified sizing (biar pill & dropdown sama) ===== */
+.ui-topbar{
+  --pill-h: 46px;        /* tinggi yang konsisten */
+  --pill-px: 16px;       /* padding kiri/kanan */
+  --pill-fz: 14px;
+  --pill-fw: 800;
+  --pill-radius: 999px;
+}
+
+/* =========================================================
+   Pill base
+   ========================================================= */
+.ui-pill{
+  height: var(--pill-h);
+  padding: 0 var(--pill-px);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--pill-radius);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  font-size: var(--pill-fz);
+  font-weight: var(--pill-fw);
+
+  display:inline-flex;
+  align-items:center;
+  gap: 10px;
+
+  /* shadow soft */
+  box-shadow:
+    0 10px 24px rgba(20, 10, 2, 0.14),
+    0 2px 8px rgba(20, 10, 2, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.20);
+
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+
+/* hover dimatikan untuk non-complex */
+:root:not([data-ui="complex"]) .ui-pill:hover{
+  transform: none;
+  filter: none;
+}
+
+/* hover hanya complex */
+:root[data-ui="complex"] .ui-pill:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 16px 38px rgba(0,0,0,0.26),
+    0 4px 12px rgba(0,0,0,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+.ui-pill:active{
+  transform: translateY(1px);
+  filter: brightness(0.99);
+  box-shadow:
+    0 8px 18px rgba(20, 10, 2, 0.13),
+    0 2px 7px rgba(20, 10, 2, 0.09),
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 -6px 14px rgba(0,0,0,0.10);
+}
+
+/* complex base shadow (lebih cocok dark theme) */
+:root[data-ui="complex"] .ui-pill{
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.22),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+:root[data-ui="complex"] .ui-pill:active{
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.22),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -10px 18px rgba(0,0,0,0.14);
+}
+
+.ui-pill--primary{
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+}
+
+/* Primary (Logout) sedikit lebih "pop" di complex */
+:root[data-ui="complex"] .ui-pill.ui-pill--primary{
+  box-shadow:
+    0 14px 34px rgba(0,0,0,0.24),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+.ui-pill__count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 70%, transparent);
+  border: 1px solid rgba(0,0,0,0.10);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   Cards + ornament
+   ========================================================= */
+.ui-card{
+  position: relative;
+  isolation: isolate;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.ui-card--pattern{
+  background-image: var(--pattern);
+  background-blend-mode: overlay;
+}
+
+.ui-card--pad{ padding: 1.25rem; }
+
+.ui-ornament{
+  position: relative;
+  isolation: isolate;
+}
+.ui-ornament::after{
+  content:"";
+  position:absolute;
+  left: 18px;
+  right: 18px;
+  top: 14px;
+  height: 26px;
+  background-image: var(--ornament);
+  background-repeat: repeat-x;
+  background-size: 240px 26px;
+  opacity: .8;
+  pointer-events:none;
+}
+:root[data-ui="simple"] .ui-ornament::after{ display:none; }
+
+/* complex style (tanpa inner rectangle frame) */
+:root[data-ui="complex"] .ui-card{
+  background-image: linear-gradient(180deg, rgba(0,0,0,0.14), transparent 40%), var(--pattern);
+  border: 1px solid rgba(214,168,79,0.60);
+}
+
+/* ✅ HILANGKAN rectangle inner frame yang bikin double */
+:root[data-ui="complex"] .ui-card::before{
+  content: none;
+}
+
+
+/* =========================
+   AUTH INPUT (Login/Register)
+   ========================= */
+
+.ui-input{
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 16px;                 /* lembut, tidak kaku */
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text);
+
+  font-size: 15px;
+  line-height: 1;
+  outline: none;
+
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.05) inset,
+    0 10px 22px rgba(0,0,0,0.06);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+}
+
+.ui-input::placeholder{
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+/* focus yang rapi */
+.ui-input:focus{
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 1px 0 rgba(0,0,0,0.05) inset,
+    0 12px 26px rgba(0,0,0,0.10);
+}
+
+/* disabled */
+.ui-input:disabled{
+  opacity: .65;
+  cursor: not-allowed;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset;
+}
+
+/* rapihin autofill chrome */
+.ui-input:-webkit-autofill{
+  -webkit-text-fill-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+  box-shadow: 0 0 0 1000px color-mix(in srgb, var(--surface) 92%, transparent) inset;
+}
+
+/* Complex: input lebih gelap & elegan */
+[data-ui="complex"] .ui-input{
+  background: color-mix(in srgb, var(--surface) 88%, rgba(0,0,0,0.18));
+  border-color: color-mix(in srgb, var(--border) 70%, rgba(255,215,128,0.18));
+  box-shadow:
+    0 1px 0 rgba(255,215,128,0.10) inset,
+    0 16px 30px rgba(0,0,0,0.35);
+}
+
+[data-ui="complex"] .ui-input:focus{
+  box-shadow:
+    0 0 0 4px rgba(255,215,128,0.16),
+    0 1px 0 rgba(255,215,128,0.10) inset,
+    0 18px 36px rgba(0,0,0,0.45);
+}
+
+/* wrapper pin */
+.ui-pinWrap{
+  position: relative;
+}
+
+/* input pin punya padding kanan utk eye */
+.ui-input--pin{
+  padding-right: 48px;
+}
+
+/* tombol eye di dalam field */
+.ui-eyeBtn{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+}
+
+.ui-eyeBtn:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* optional: kalau kamu mau NO hover sama sekali, hapus block ini */
+.ui-eyeBtn:hover{
+  background: rgba(0,0,0,0.06);
+}
+[data-ui="complex"] .ui-eyeBtn:hover{
+  background: rgba(255,215,128,0.10);
+}
+
+/* =========================================
+   HILANGKAN eye bawaan Edge/IE (penyebab icon dobel)
+   ========================================= */
+.ui-input--pin::-ms-reveal,
+.ui-input--pin::-ms-clear{
+  display: none;
+}
+
+/* (opsional) beberapa Chromium muncul tombol autofill kecil */
+.ui-input--pin::-webkit-credentials-auto-fill-button,
+.ui-input--pin::-webkit-contacts-auto-fill-button{
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
+
+.ui-mode{
+  display:flex;
+  align-items:center;
+  gap: 15px;
+}
+
+.ui-selectWrap{
+  position: relative;
+  display: inline-block;
+}
+
+.ui-select.ui-select--soft{
+  height: var(--pill-h);                 /* ✅ sama tinggi */
+  padding: 0 calc(var(--pill-px) + 18px) 0 var(--pill-px); /* kanan ada icon */
+  border-radius: var(--pill-radius);     /* ✅ sama rounded */
+  font-size: var(--pill-fz);
+  font-weight: var(--pill-fw);
+  line-height: 1;
+
+  border: 1px solid var(--btn-border);   /* ✅ samain border feel */
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  /* samakan shadow dengan pill */
+  box-shadow:
+    0 10px 24px rgba(20, 10, 2, 0.14),
+    0 2px 8px rgba(20, 10, 2, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.20);
+
+  transition: none;
+}
+
+/* complex shadow untuk dropdown juga */
+:root[data-ui="complex"] .ui-select.ui-select--soft{
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.22),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* icon chevron tetap */
+.ui-selectIcon{
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* PANEL: ukuran normal, tidak “bengkak”, rounded halus */
+.ui-selectPanel{
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;                 /* ✅ sama lebar dengan trigger */
+  padding: 8px;
+
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);  /* ✅ tipis (bukan hitam tebal) */
+  border-radius: 16px;          /* ✅ rounded seperti referensi */
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+
+  z-index: 999;                 /* ✅ biar gak ketimpa */
+}
+
+/* ITEM: rapi & tidak memanjang aneh */
+.ui-selectItem{
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.875rem;          /* ✅ sama seperti lama */
+  line-height: 1.2;
+  color: rgba(0,0,0,0.75);
+  cursor: pointer;
+}
+
+/* hover/active halus */
+.ui-selectItem.is-active{
+  background: rgba(59,130,246,0.08);
+}
+
+/* selected */
+.ui-selectItem.is-selected{
+  background: rgba(59,130,246,0.12);
+  color: rgb(37, 99, 235);
+}
+
+/* =========================================
+   SIMPLE: hilangkan shadow di TopBar controls
+========================================= */
+:root[data-ui="simple"] .ui-pill,
+:root[data-ui="simple"] .ui-select.ui-select--soft{
+  box-shadow: none !important;
+}
+
+/* optional: biar tetap flat saat hover/active */
+:root[data-ui="simple"] .ui-pill:hover,
+:root[data-ui="simple"] .ui-pill:active{
+  transform: none !important;
+  filter: none !important;
+}
+
+
+/* =========================================================
+   HOME Buttons (dipakai oleh React yang kamu kirim)
+   - .ui-btn / .ui-btn--primary
+   - hover hanya complex
+   - simple: no shadow
+========================================================= */
+
+/* base button */
+.ui-btn{
+  border: 1px solid var(--btn-border);
+  border-radius: 22px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 900;
+
+  /* ✅ shadow soft & centered (seirama TopBar) */
+  box-shadow:
+    0 10px 24px rgba(20, 10, 2, 0.14),
+    0 2px 8px rgba(20, 10, 2, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.20);
+
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+
+/* primary button (PLAY) */
+.ui-btn--primary{
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+
+  /* sedikit lebih kuat dari button biasa */
+  box-shadow:
+    0 12px 28px rgba(20, 10, 2, 0.16),
+    0 3px 10px rgba(20, 10, 2, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+/* active press */
+.ui-btn:active{
+  transform: translateY(1px);
+  filter: brightness(0.99);
+  box-shadow:
+    0 8px 18px rgba(20, 10, 2, 0.13),
+    0 2px 7px rgba(20, 10, 2, 0.09),
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 -6px 14px rgba(0,0,0,0.10);
+}
+
+/* =========================================================
+   Hover hanya COMPLEX
+========================================================= */
+:root:not([data-ui="complex"]) .ui-btn:hover{
+  transform: none !important;
+  filter: none !important;
+}
+
+:root[data-ui="complex"] .ui-btn{
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.22),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+:root[data-ui="complex"] .ui-btn--primary{
+  box-shadow:
+    0 14px 34px rgba(0,0,0,0.24),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+:root[data-ui="complex"] .ui-btn:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 16px 38px rgba(0,0,0,0.26),
+    0 4px 12px rgba(0,0,0,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+:root[data-ui="complex"] .ui-btn:active{
+  transform: translateY(0px);
+  filter: brightness(0.99);
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.22),
+    0 3px 10px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -10px 18px rgba(0,0,0,0.14);
+}
+
+/* =========================================================
+   FIX Chip (Score / Sesi / Akurasi) -> seperti gambar 2
+   khusus MEDIUM (dan aman untuk umum)
+========================================================= */
+
+:root[data-ui="medium"] .ui-chip{
+  background: rgba(255,255,255,0.92) !important;  /* putih pill */
+  border: 1px solid rgba(0,0,0,0.10) !important;  /* border halus */
+  color: rgba(0,0,0,0.80) !important;
+
+  padding: 10px 16px !important;
+  border-radius: 999px !important;
+
+  font-size: 14px !important;
+  font-weight: 900 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08) !important; /* soft */
+}
+
+
+/* =========================================================
+   SIMPLE: hilangkan shadow tombol (sesuai request)
+========================================================= */
+:root[data-ui="simple"] .ui-btn{
+  box-shadow: none !important;
+}
+
+
+/* =========================================================
+   Quiz option + option-img
+   ========================================================= */
+.ui-option{
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  width:100%;
+  padding: 0.85rem 1rem;
+  text-align:left;
+  font-size: 1rem;
+  font-weight: 900;
+  transition: transform 0.15s, filter 0.15s;
+}
+.ui-option:active{ transform: translateY(2px); filter: brightness(0.98); }
+
+.ui-option[data-state="correct"]{
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+}
+.ui-option[data-state="wrong"]{
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+}
+
+.ui-optionimg{
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  flex: 0 0 auto;
+}
+.ui-optionimg img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* timer bar */
+.ui-timerbar{
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  overflow:hidden;
+}
+.ui-timerbar__fill{
+  height:100%;
+  background: color-mix(in srgb, var(--accent) 70%, var(--accent-2));
+  border-radius: 999px;
+}
+
+/* media card */
+.ui-media-card{
+  overflow:hidden;
+}
+.ui-media-card__img{
+  width:100%;
+  height: 220px;
+  object-fit: contain;
+  display:block;
+}
+
+/* wrapper gambar di kartu */
+.ui-media-card__img .bn-square{
+  aspect-ratio: 1 / 1;
+  background: #fff;          /* chibi biasanya putih */
+  border-radius: 14px;
+  overflow: hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px;             /* biar tidak mentok, tidak kepotong */
+}
+
+/* ini kuncinya: jangan cover untuk chibi */
+.ui-media-card__img .bn-square img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;       /* ✅ tidak terpotong */
+  display:block;
+}
+
+
+@media (min-width: 1024px){
+  .ui-media-card__img{ height: 260px; }
+}
+
+/* =========================================================
+   Panels + tiles (Learn)
+   ========================================================= */
+.ui-panel{
+  border-radius: 34px;
+  border: 2px solid var(--panel-border);
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
+  padding: 18px;
+}
+
+.ui-panel__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 4px 4px 12px 4px;
+}
+
+.ui-panel__title{
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: .2px;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.ui-panel__hint{
+  font-size: 12px;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
+}
+
+.ui-iconbtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,0.7);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+:root[data-ui="complex"] .ui-iconbtn{
+  background: rgba(16,42,47,0.75);
+  border-color: rgba(214,168,79,0.25);
+  color: var(--text);
+}
+.ui-iconbtn:hover{ filter: brightness(0.98); }
+
+.ui-tile{
+  border-radius: 28px;
+  border: 2px solid var(--tile-border);
+  background: var(--tile-bg);
+  box-shadow: var(--tile-shadow);
+  padding: 12px;
+  text-align:left;
+}
+
+.ui-tile__media{
+  border-radius: 22px;
+  border: 2px solid rgba(255,255,255,0.25);
+  background: var(--inner-bg);
+  padding: 12px;
+  height: 150px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+:root[data-ui="complex"] .ui-tile__media{
+  border-color: rgba(214,168,79,0.18);
+}
+
+.ui-tile__img{
+  width:100%;
+  height:100%;
+  object-fit: contain;
+}
+
+.ui-tile__label{
+  margin-top: 10px;
+  font-weight: 900;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 86%, transparent);
+}
+
+.ui-tile__sub{
+  margin-top: 2px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--muted) 92%, transparent);
+}
+
+.ui-tiles{
+  display:grid;
+  gap: 12px;
+}
+@media (min-width: 640px){
+  .ui-tiles--2{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px){
+  .ui-tiles--3{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* =========================================================
+   Achievements list card (kept)
+   ========================================================= */
+.ui-listcard{
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.55);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.06);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.ui-listcard:active{ transform: translateY(2px); }
+.ui-listcard:hover{ box-shadow: 0 14px 26px rgba(0,0,0,0.08); }
+
+.ui-badge-tile{
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0,0,0,0.08);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.ui-badge-chevron{
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.6;
+}
+:root[data-ui="complex"] .ui-listcard{
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-color: rgba(214, 168, 79, 0.35);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+:root[data-ui="complex"] .ui-badge-tile{
+  background: rgba(16, 42, 47, 0.85);
+  border-color: rgba(214, 168, 79, 0.35);
+}
+
+/* ===== Achievements: jangan bisa di-select ===== */
+.bn-noselect,
+.bn-noselect *{
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Hindari drag image (kadang masih bisa kebawa) */
+.bn-noselect img{
+  -webkit-user-drag: none;
+}
+
+/* (opsional) kalau mau klik row terasa "button" tapi tanpa highlight selection */
+.bn-badgeRow{
+  cursor: default;
+}
+
+
+/* =========================================================
+   Small helpers for complex readability
+   ========================================================= */
+.ui-darkpanel{
+  background: var(--surface-2);
+}
+:root[data-ui="complex"] .ui-darkpanel{
+  background: rgba(16,42,47,0.72);
+  border-color: rgba(214,168,79,0.26);
+}
+.ui-progress{
+  width:100%;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  overflow:hidden;
+}
+.ui-progress__fill{
+  height:100%;
+  background: color-mix(in srgb, var(--accent) 78%, var(--accent-2));
+  border-radius: 999px;
+}
+
+.ui-dialog-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.55);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.ui-dialog{
+  width: min(520px, 92vw);
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 22px 60px rgba(0,0,0,0.45);
+  padding: 18px;
+}
+
+.ui-dialog__title{
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.ui-dialog__msg{
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ui-dialog__actions{
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.ui-pill--icon{
+  padding: 10px 12px;
+  gap: 0;
+  position: relative;
+}
+.ui-badge-dot{
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-bg) 90%, transparent);
+  color: var(--primary-text);
+  border: 1px solid rgba(0,0,0,0.15);
+  font-size: 12px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes quoteIn{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+@keyframes xpPulse{
+  0%,100%{ filter: brightness(1); }
+  50%{ filter: brightness(1.15); }
+}
+
+.ui-hud{
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  padding: 10px 12px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+.ui-hud__label{
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  font-weight: 900;
+  color: var(--muted);
+}
+.ui-hud__value{
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.ui-mini{
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 20%, transparent);
+  padding: 10px 10px;
+}
+.ui-mini__k{
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--muted);
+}
+.ui-mini__v{
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.ui-badge-preview{
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+  padding: 10px;
+}
+.ui-badge-preview__icon{
+  font-size: 18px;
+}
+.ui-badge-preview__text{
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes uiShake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+.ui-shake {
+  animation: uiShake 0.28s ease-in-out;
+}
+
+@keyframes timerPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
+.ui-timerbar__fill--pulse {
+  animation: timerPulse 0.9s ease-in-out infinite;
+}
+
+/* ===========================
+   COMPLEX POPUP (NO SCROLL)
+   =========================== */
+
+.bn-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.55);
+  display:flex;
+  align-items:center;              /* ✅ center biar tidak “ketiban” top padding */
+  justify-content:center;
+  padding: 16px;                   /* ✅ lebih aman */
+  z-index: 60;
+}
+
+.bn-modal{
+  width: min(760px, 100%);         /* ✅ sedikit lebih lebar biar lega */
+  background: var(--surface, #fff);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.25);
+  overflow: hidden;
+
+  /* ✅ tidak scroll: kita pastikan kontennya diperkecil agar muat */
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+
+  transform: translateY(8px) scale(.98);
+  opacity: 0;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.bn-modal[data-open="1"]{ transform: translateY(0) scale(1); opacity: 1; }
+
+.bn-modal__head{
+  padding: 14px 16px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  background: var(--surface-2);
+  flex: 0 0 auto;
+}
+
+.bn-modal__body.bn-modal__body--fixed{
+  padding: 14px 16px 16px;
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+
+  /* ✅ kunci: tidak ada scroll */
+  overflow: hidden;
+
+  /* biar body ikut menyusut kalau layar pendek */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ✅ GAMBAR: diperkecil otomatis & tidak kepotong */
+/* ✅ GAMBAR POPUP COMPLEX: jangan kepotong + diperkecil */
+.bn-mediaBox{
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* biar gambar nggak nempel border */
+  padding: 10px;
+}
+
+.bn-mediaBox img{
+  width: 100%;
+  height: clamp(180px, 34vh, 320px); /* ✅ diperkecil */
+  object-fit: contain !important;    /* ✅ paksa tidak crop */
+  display: block;
+  border-radius: 12px;              /* ✅ biar rapi di dalam padding */
+}
+
+/* funfact card styling supaya konsisten & tidak dorong layout berlebihan */
+.bn-funCard{
+  background: var(--surface-2);
+  border-radius: 16px;
+}
+
+/* Medium detail: kasih jarak meta ke funFact */
+.bn-detailCompact .bn-funFact{
+  margin-top: 14px; /* coba 12–18px */
+}
+
+/* footer fixed-like (tanpa scroll) */
+.bn-modal__footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* ===== Achievements (COMPLEX) ===== */
+.bn-achievements--complex .bn-badgeIconWrap{
+  width: 175px;    
+  height: 175px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.bn-achievements--complex .bn-badgeIcon{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ✅ locked jadi "putih" khusus complex */
+.bn-achievements--complex .bn-badgeRow[data-locked="1"] .bn-badgeIcon{
+  /* kalau file locked kamu dominan gelap, ini bikin kelihatan putih */
+  filter: grayscale(1) brightness(2.6) contrast(0.95);
+  opacity: 0.95;
+}
+
+/* ===== Achievements (MEDIUM) ===== */
+.bn-achievements--medium .bn-badgeIconWrap{
+  width: 150px;
+  height: 150px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.bn-achievements--medium .bn-badgeIcon{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* simple grid icon */
+.bn-badgeGridIcon{
+  width: 125px;
+  height: 125px;
+  object-fit: contain;
+  display: block;
+}
+
+.bn-badgePh{
+  border-radius: 18px;
+  background: rgba(255,255,255,.08);
+}
+
+/* =========================
+   Quiz: rapihin padding card
+   ========================= */
+.quiz-card.ui-card--pad {
+  padding: 14px !important; /* lebih rapat */
+}
+
+@media (min-width: 768px) {
+  .quiz-card.ui-card--pad {
+    padding: 16px !important;
+  }
+}
+
+/* =========================
+   Quiz layout: image left, content right
+   ========================= */
+.quiz-qwrap {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+
+/* default (mobile): stack */
+.quiz-qwrap.has-media {
+  grid-template-columns: 1fr;
+}
+
+/* desktop/tablet: 2 kolom */
+@media (min-width: 900px) {
+  .quiz-qwrap.has-media {
+    grid-template-columns: 240px 1fr; /* kiri gambar fixed, kanan fleksibel */
+    gap: 14px;
+  }
+}
+
+.quiz-qmedia {
+  position: relative;
+  z-index: 1;
+  justify-self: start; /* biar nempel kiri */
+}
+
+.quiz-qmain {
+  min-width: 0;
+}
+
+/* prompt lebih rapat */
+.quiz-prompt {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+/* options lebih rapat */
+.quiz-options {
+  display: grid;
+  gap: 8px;
+}
+
+/* kecilkan tombol option tanpa ubah komponen lain */
+.quiz-card .quiz-options button {
+  padding: 10px 14px !important;
+  min-height: 44px !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  border-radius: 14px !important;
+}
+
+/* progress rapat */
+.quiz-progress {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+/* =========================
+   Quiz Media: kecil, tajam, 1:1
+   ========================= */
+.quiz-media {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* mobile: jangan kebesaran */
+@media (max-width: 899px) {
+  .quiz-media {
+    max-width: 260px;
+    margin-inline: 0; /* tetap kiri */
+  }
+}
+
+.quiz-media__img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* =========================================================
+   UI MODE LOADER (style dipisah dari component)
+   - teks selalu gelap (kebaca di complex)
+   - overlay lebih gelap saat complex
+========================================================= */
+
+:root{
+  --loader-overlay: rgba(0,0,0,.35);
+  --loader-card-bg: #ffffff;
+  --loader-border: rgba(17,24,39,.10);
+  --loader-title: #111827; /* gray-900 */
+  --loader-text: #374151;  /* gray-700 */
+  --loader-spinner-ring: rgba(17,24,39,.12);
+  --loader-spinner-top: #111827;
+}
+
+body[data-ui="complex"]{
+  --loader-overlay: rgba(0,0,0,.55);
+}
+
+/* wrapper */
+.ui-mode-loader{
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* overlay */
+.ui-mode-loader__overlay{
+  position: absolute;
+  inset: 0;
+  background: var(--loader-overlay);
+}
+
+/* card */
+.ui-mode-loader__card{
+  position: relative;
+  width: 100%;
+  max-width: 24rem; /* setara max-w-sm */
+  background: var(--loader-card-bg);
+  border: 1px solid var(--loader-border);
+  border-radius: 24px; /* rounded-3xl */
+  padding: 24px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.18);
+  color: var(--loader-title);
+}
+
+.ui-mode-loader__row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ui-mode-loader__spinner{
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: 4px solid var(--loader-spinner-ring);
+  border-top-color: var(--loader-spinner-top);
+  animation: uiLoaderSpin .9s linear infinite;
+}
+
+@keyframes uiLoaderSpin{
+  to { transform: rotate(360deg); }
+}
+
+.ui-mode-loader__title{
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--loader-title);
+}
+
+.ui-mode-loader__label{
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--loader-text);
+}
+
+/* =========================================================
+   GLOBAL BACKGROUND MOTIF (Medium vs Complex)
+   - nempel ke seluruh halaman (global), bukan card
+========================================================= */
+
+html, body {
+  min-height: 100%;
+}
+
+html {
+  background: var(--app-bg, #fbf2e7);
+}
+
+/* layer motif (GLOBAL) -> pakai html::before biar aman */
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+
+  background-image: var(--app-motif, none);
+  background-repeat: repeat;
+  background-size: var(--app-motif-size, 320px 320px);
+  opacity: var(--app-motif-opacity, 0);
+
+  transform: translateZ(0);
+}
+
+body {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  overflow-x: hidden;
+}
+
+/* pastikan konten app di atas motif */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* IMPORTANT:
+   kalau wrapper kamu punya background solid,
+   motif akan ketutup. Pastikan wrapper utama transparan. */
+.app-shell,
+.app-shell__main,
+.ui-page,
+.ui-shell,
+.ui-root {
+  background: transparent !important;
+}
+
+/* =========================================================
+   MODE BACKGROUND
+   NOTE: URL motif akan di-set dari UiTheme -> CSS var:
+         --motif-medium-url dan --motif-complex-url
+========================================================= */
+
+/* ---------- SIMPLE (warna lama, beda dari medium) ---------- */
+html[data-ui="simple"] {
+  --app-bg: #f4f6f9;              /* beda dari medium (beige) */
+  --app-motif: none;
+  --app-motif-opacity: 0;
+}
+
+/* ---------- MEDIUM: motif batik (gambar 1) ---------- */
+html[data-ui="medium"] {
+  --app-bg: #fbf2e7;
+  --app-motif: var(--motif-medium-url, none);
+  --app-motif-size: 420px 420px;
+  --app-motif-opacity: 0.08;
+}
+
+/* ---------- COMPLEX: motif hijau (gambar 2) ---------- */
+html[data-ui="complex"] {
+  --app-bg: #061a1f;
+  --app-motif: var(--motif-complex-url, none);
+  --app-motif-size: 520px 520px;
+  --app-motif-opacity: 0.10;
+}
+
+/* efek opsional untuk complex */
+html[data-ui="complex"]::before {
+  filter: saturate(0.9) contrast(1.05);
+  mix-blend-mode: screen; /* kalau terlalu terang, ganti normal */
+}
+
+@supports not (mix-blend-mode: screen) {
+  html[data-ui="complex"]::before {
+    mix-blend-mode: normal;
+  }
+}
+
+/* =========================================================
+   HILANGKAN "GARIS RECTANGLE" YANG MENIMPA (khusus COMPLEX)
+   Biasanya berasal dari wrapper layout/outline/border.
+========================================================= */
+html[data-ui="complex"] .app-shell,
+html[data-ui="complex"] .app-shell__main,
+html[data-ui="complex"] .ui-page,
+html[data-ui="complex"] .ui-shell,
+html[data-ui="complex"] .ui-root {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* =========================================================
+   UI MODE LOADER (dipakai UiModeLoader.jsx)
+========================================================= */
+.ui-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ui-loader__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+}
+
+/* default card loader */
+.ui-loader__card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.92);
+  padding: 20px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.20);
+  color: #0b0f12; /* font gelap, kebaca */
+}
+
+.ui-loader__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ui-loader__spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 4px solid rgba(0,0,0,0.14);
+  border-top-color: rgba(0,0,0,0.85);
+  animation: uiSpin 0.9s linear infinite;
+}
+
+.ui-loader__title {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.ui-loader__text {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+@keyframes uiSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* kompleks: tetap font gelap, backdrop lebih kuat biar fokus */
+html[data-ui="complex"] .ui-loader__backdrop {
+  background: rgba(0,0,0,0.50);
+}
+
+/* =========================================================
+   QUIZ MEDIA 1:1 (untuk request “ukuran asli 1:1”)
+   - container square, gambar tidak kepotong (contain)
+========================================================= */
+.quiz-media {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  display: grid;
+  place-items: center;
+}
+
+.quiz-media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* tidak kepotong */
+  display: block;
+}
+
+/* Animasi hanya untuk mode complex */
+.catcard--complex{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.catcard--complex:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255, 215, 128, 0.18) inset;
+}
+
+/* efek tile icon complex */
+.catcard--complex .catcard-iconFx{
+  border-radius: 18px;
+  background: rgba(255, 215, 128, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(255, 215, 128, 0.18) inset,
+    0 10px 18px rgba(0,0,0,0.20);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.catcard--complex:hover .catcard-iconFx{
+  transform: translateY(-1px) scale(1.03);
+  background: rgba(255, 215, 128, 0.16);
+  box-shadow:
+    0 0 0 1px rgba(255, 215, 128, 0.28) inset,
+    0 16px 26px rgba(0,0,0,0.26);
+}
+
+/* icon wobble */
+.catcard--complex .catcard-iconImg{
+  transition: transform .18s ease, filter .18s ease;
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.22));
+}
+.catcard--complex:hover .catcard-iconImg{
+  transform: rotate(-6deg) scale(1.06);
+  filter: drop-shadow(0 14px 18px rgba(0,0,0,0.30));
+}
+
+/* default (medium) — biarkan seperti yang sekarang
+.ui-icon-tile{
+  
+} */
+
+/* =========================
+   CATEGORY ICON SIZE CONTROL
+   ========================= */
+
+/* MEDIUM (default selain simple & complex) */
+.catcard--medium .ui-icon-tile,
+[data-ui="medium"] .ui-icon-tile{
+  width: 98px !important;
+  height: 98px !important;
+  padding: 0 !important;
+}
+
+.catcard--medium .ui-icon-tile img,
+[data-ui="medium"] .ui-icon-tile img{
+  width: 104px !important;
+  height: 104px !important;
+}
+
+/* COMPLEX (lebih besar & dramatis) */
+.catcard--complex .ui-icon-tile{
+  width: 112px !important;
+  height: 112px !important;
+  padding: 0 !important;
+}
+
+.catcard--complex .ui-icon-tile img{
+  width: 104px !important;
+  height: 104px !important;
+}
+
+/* optional: kalau di layar besar mau lebih gede lagi */
+@media (min-width: 640px){
+  .catcard--complex .ui-icon-tile{
+    width: 104px !important;
+    height: 104px !important;
+  }
+  .catcard--complex .ui-icon-tile img{
+    width: 88px !important;
+    height: 88px !important;
+  }
+}
+
+/* =========================
+   Toast styles
+   ========================= */
+
+.ui-toastHost{
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+}
+
+/* default: terang + teks hitam (terbaca) */
+.ui-toast{
+  display: grid;
+  grid-template-columns: 34px 1fr 28px;
+  gap: 10px;
+  align-items: center;
+
+  padding: 12px 12px;
+  border-radius: 18px;
+
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+
+  cursor: pointer;
+}
+
+.ui-toast *{
+  color: #111111;
+}
+
+.ui-toast__icon{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,0,0,0.05);
+  font-size: 18px;
+}
+
+.ui-toast__title{
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.ui-toast__msg{
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.ui-toast__close{
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  border: 0;
+  background: rgba(0,0,0,0.06);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ✅ Mode complex: tetap terang agar kontras di background gelap */
+[data-ui="complex"] .ui-toast{
+  background: #fff7e6; /* krem terang, cocok gold theme */
+  border-color: rgba(255, 215, 128, 0.55);
+  box-shadow:
+    0 22px 60px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255, 215, 128, 0.22) inset;
+}
+
+[data-ui="complex"] .ui-toast__icon{
+  background: rgba(255, 215, 128, 0.22);
+}
+
+/* =========================================================
+   LEARN PAGE helpers
+   ========================================================= */
+
+/* Anchor untuk scroll agar tidak ketutup TopBar sticky */
+.bn-detailAnchor {
+  scroll-margin-top: 92px; /* sesuaikan tinggi topbar kamu */
+}
+
+/* SIMPLE: no crop */
+.bn-simpleMedia {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+}
+.bn-simpleMedia img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.bn-simpleBody {
+  padding-top: 10px;
+}
+.bn-simpleTitle {
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1.15;
+}
+.bn-simpleMeta {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* Square base */
+.bn-square {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.bn-square img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.bn-square--contain img {
+  object-fit: contain;
+}
+.bn-square--cover img {
+  object-fit: cover;
+}
+
+/* Medium detail card compact + close icon */
+.bn-detailCompact {
+  position: relative;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.bn-detailClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.bn-detailClose:hover {
+  filter: brightness(0.98);
+}
+
+.bn-detailRow {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.bn-detailImg {
+  width: 210px;
+  flex: 0 0 210px;
+}
+
+.bn-detailBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.bn-detailMeta {
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .bn-detailRow {
+    flex-direction: column;
+  }
+  .bn-detailImg {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+}
+
+/* Popup backdrop + modal */
+.bn-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 88px 16px 24px;
+  z-index: 60;
+}
+
+.bn-modal {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 120px);
+  background: var(--surface, #fff);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.bn-modal[data-open="1"] {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.bn-modal__head {
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-2);
+}
+
+.bn-modal__headText {
+  padding-right: 8px;
+  min-width: 0;
+}
+
+.bn-modal__body {
+  overflow: auto;
+  padding: 16px;
+}
+
+:root[data-ui="complex"] .bn-closeBtn{
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--primary-bg) 92%, #fff 8%),
+    var(--primary-bg)
+  );
+  color: var(--primary-text);
+  border: 1px solid color-mix(in srgb, var(--primary-border) 85%, #fff 15%);
+  box-shadow:
+    0 16px 34px rgba(0,0,0,0.28),
+    0 4px 12px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+:root[data-ui="complex"] .bn-closeBtn:hover{
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+:root[data-ui="complex"] .bn-closeBtn:active{
+  transform: translateY(0);
+  filter: brightness(0.98);
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.24),
+    0 3px 10px rgba(0,0,0,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -10px 18px rgba(0,0,0,0.18);
+}

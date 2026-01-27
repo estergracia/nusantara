@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color-scheme: light;
+}
+
+/* Link default (safe) */
+a {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: inherit;
+}
+a:hover {
+  opacity: 0.9;
+}
+
+/* Full-height app */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  display: block;
+}
+
+/* Heading default */
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+/* Button default template (dibiarin minimal supaya tidak bentrok dengan ui-btn) */
+button {
+  font-family: inherit;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* =========================================================
+   Responsive helpers (global)
+   ========================================================= */
+
+/* Mobile kecil (<= 360px): perkecil base font sedikit biar muat */
+@media (max-width: 360px) {
+  :root {
+    font-size: 14px;
+  }
+}
+
+/* Mobile umum (<= 640px): pastikan tap target nyaman */
+@media (max-width: 640px) {
+  :root {
+    font-size: 15px;
+  }
+
+  /* tombol & input minimal tinggi tap target */
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+}
+
+/* Tablet (>= 768px): sedikit lebih lega */
+@media (min-width: 768px) {
+  :root {
+    font-size: 16px;
+  }
+}
+
+/* Desktop besar (>= 1280px): font sedikit naik untuk readability */
+@media (min-width: 1280px) {
+  :root {
+    font-size: 17px;
+  }
+}
+
+/* Prefer reduced motion: global disable animasi berlebihan */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Theme light fallback (kalau browser memaksa light mode) */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+  }
+}
