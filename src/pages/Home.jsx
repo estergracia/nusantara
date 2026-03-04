@@ -14,7 +14,7 @@ const QUOTES = [
   "Hari ini satu langkah, besok lebih dekat. 🚀",
   "Pelan-pelan asal konsisten. 🌿",
   "Salah itu bagian dari proses. 🙂",
-  "Belajar itu seperti leveling—jalan terus. 🎮",
+  "Belajar itu seperti leveling jalan terus. 🎮",
   "Fokus ke progres, bukan perfeksionis. ✨",
   "Satu sesi lagi, biar naik level. 🏁",
 ];
