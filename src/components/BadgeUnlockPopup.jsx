@@ -1,6 +1,7 @@
 // src/components/BadgeUnlockPopup.jsx
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import useUiLevelFirestore from "../hooks/useUiLevelFirestore.js";
+import { playSfx } from "../utils/sfx.js";
 
 function tierGlow(tier) {
   if (tier === "legendary") return { glow: 0.95, rays: 0.78, blur: 28 };
@@ -9,8 +10,14 @@ function tierGlow(tier) {
   return { glow: 0.55, rays: 0.38, blur: 18 };
 }
 
+// cache global preload status agar badge image tidak “ulang lambat”
+const _badgeImgCache = new Map(); // url -> "ready" | "error"
+
 export default function BadgeUnlockPopup({ badgeId, meta, onClose }) {
   const { level, is } = useUiLevelFirestore();
+  const cardRef = useRef(null);
+
+  const [imgReady, setImgReady] = useState(false);
 
   const ui = useMemo(() => {
     if (is?.complex) return "complex";
@@ -23,117 +30,145 @@ export default function BadgeUnlockPopup({ badgeId, meta, onClose }) {
   const iconEmoji = meta?.icon || "🏅";
   const iconUrl = meta?.iconUrl || "";
   const tier = meta?.tier || "bronze";
+  const g = tierGlow(tier);
 
-  const cardRef = useRef(null);
+  useEffect(() => {
+    setImgReady(false);
+
+    if (!iconUrl) return;
+
+    const cached = _badgeImgCache.get(iconUrl);
+    if (cached === "ready") {
+      setImgReady(true);
+      return;
+    }
+    if (cached === "error") {
+      setImgReady(false);
+      return;
+    }
+
+    let alive = true;
+    const img = new Image();
+
+    img.onload = () => {
+      _badgeImgCache.set(iconUrl, "ready");
+      alive && setImgReady(true);
+    };
+    img.onerror = () => {
+      _badgeImgCache.set(iconUrl, "error");
+      alive && setImgReady(false);
+    };
+
+    img.src = iconUrl;
+
+    return () => {
+      alive = false;
+    };
+  }, [iconUrl]);
 
   useEffect(() => {
     cardRef.current?.focus?.();
   }, []);
 
-  const g = tierGlow(tier);
+  const playedRef = useRef(false);
+  useEffect(() => {
+    if (playedRef.current) return;
+    playedRef.current = true;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+
+    try {
+      playSfx("unlock");
+    } catch {}
+  }, []);
 
   return (
     <div
-      className={`bn-badge-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4 bn-badge-overlay--${ui}`}
+      className={`bn-badge-overlay bn-badge-overlay--${ui} bn-badge-scope`}
       onClick={onClose}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onClose?.();
-      }}
       aria-label="Badge unlocked popup"
     >
       <style>{`
-        /* =========================================
-           Overlay
-           ========================================= */
+        .bn-badge-scope{
+          isolation:isolate;
+          contain:layout paint;
+        }
+
+        /* ✅ SUPER CEPAT: overlay fade 80ms, tanpa blur (blur sering bikin render berat) */
         .bn-badge-overlay{
-          background: rgba(0,0,0,.35);
-          animation: bnFadeIn .18s ease-out both;
-          backdrop-filter: blur(2px);
+          position:fixed;
+          inset:0;
+          z-index:9999;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:16px;
+          background:rgba(0,0,0,.35);
+          animation:bnFadeInFast .08s ease-out both;
+          will-change:opacity;
         }
-        .bn-badge-overlay--simple{ background: rgba(0,0,0,.22); backdrop-filter: none; }
-        .bn-badge-overlay--medium{ background: rgba(0,0,0,.26); backdrop-filter: blur(1px); }
-        .bn-badge-overlay--complex{ background: rgba(0,0,0,.42); backdrop-filter: blur(2px); }
+        .bn-badge-overlay--simple{ background:rgba(0,0,0,.22); }
+        .bn-badge-overlay--medium{ background:rgba(0,0,0,.26); }
+        .bn-badge-overlay--complex{ background:rgba(0,0,0,.42); }
 
-        @keyframes bnFadeIn{
-          from{ opacity: 0; }
-          to{ opacity: 1; }
+        @keyframes bnFadeInFast{
+          from{opacity:0}
+          to{opacity:1}
         }
 
-        /* =========================================
-           Card (✅ SOLID + tidak ikut ui-card)
-           ========================================= */
+        /* ✅ pop card 120ms */
         .bn-badge-card{
-          animation: bnPopIn .22s cubic-bezier(.2,.95,.2,1) both;
-          will-change: transform, opacity;
-          outline: none;
-
-          /* ✅ solid */
-          background: var(--surface-1);
-          border: 1px solid var(--border);
-          border-radius: 22px;
-
-          box-shadow: 0 18px 55px rgba(0,0,0,.30);
-
-          /* padding dipindah ke sini */
-          padding: 20px;
+          animation:bnPopInFast .12s cubic-bezier(.2,.95,.2,1) both;
+          will-change:transform,opacity;
+          outline:none;
+          background:var(--surface);
+          border:1px solid var(--border);
+          border-radius:22px;
+          box-shadow:0 18px 55px rgba(0,0,0,.30);
+          padding:20px;
+          width:min(560px,92vw);
+          text-align:center;
+          cursor:pointer;
+          transform: translateZ(0);
         }
 
-        body[data-ui="medium"] .bn-badge-card{
-          box-shadow: 0 22px 64px rgba(0,0,0,.28);
-        }
-        body[data-ui="complex"] .bn-badge-card{
-          border-color: color-mix(in srgb, var(--border) 55%, rgba(255,215,128,.35));
-          box-shadow:
-            0 26px 70px rgba(0,0,0,.42),
-            0 0 0 1px rgba(255,215,128,.10) inset;
+        @keyframes bnPopInFast{
+          from{transform:translateY(6px) scale(.975);opacity:0}
+          to{transform:translateY(0) scale(1);opacity:1}
         }
 
-        @keyframes bnPopIn{
-          from{ transform: translateY(10px) scale(.92); opacity: 0; }
-          to{ transform: translateY(0) scale(1); opacity: 1; }
-        }
-
-        /* =========================================
-           Hero (lebih besar & responsif)
-           ========================================= */
         .bn-badge-hero{
-          position: relative;
-          width: 190px;
-          height: 190px;
-          margin: 0 auto;
-          display: grid;
-          place-items: center;
+          position:relative;
+          width:190px;
+          height:190px;
+          margin:0 auto;
+          display:grid;
+          place-items:center;
         }
 
-        body[data-ui="simple"] .bn-badge-hero{ width: 200px; height: 200px; }
-
-        /* =========================================
-           Sparkle
-           ========================================= */
         .bn-glow{
-          position: absolute;
-          inset: -22px;
-          border-radius: 999px;
-          filter: blur(var(--glow-blur));
-          opacity: var(--glow-opacity);
-          background: radial-gradient(circle at 50% 50%,
+          position:absolute;
+          inset:-22px;
+          border-radius:999px;
+          filter:blur(var(--glow-blur));
+          opacity:var(--glow-opacity);
+          background:radial-gradient(circle at 50% 50%,
             rgba(255,255,255,.95) 0%,
             rgba(255,255,255,.60) 22%,
             rgba(255,255,255,.18) 48%,
-            rgba(255,255,255,0) 72%
-          );
-          animation: bnPulse 1.6s ease-in-out infinite;
-          pointer-events: none;
+            rgba(255,255,255,0) 72%);
+          animation:bnPulse 1.6s ease-in-out infinite;
+          pointer-events:none;
         }
 
         .bn-rays{
-          position: absolute;
-          inset: -30px;
-          border-radius: 999px;
-          opacity: var(--rays-opacity);
-          background: conic-gradient(
+          position:absolute;
+          inset:-30px;
+          border-radius:999px;
+          opacity:var(--rays-opacity);
+          background:conic-gradient(
             from 0deg,
             rgba(255,255,255,0),
             rgba(255,255,255,.40),
@@ -143,85 +178,62 @@ export default function BadgeUnlockPopup({ badgeId, meta, onClose }) {
             rgba(255,255,255,.46),
             rgba(255,255,255,0)
           );
-          filter: blur(1px);
-          animation: bnSpin 2.6s linear infinite;
-          mask-image: radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 58%, rgba(0,0,0,0) 74%);
-          pointer-events: none;
+          filter:blur(1px);
+          animation:bnSpin 2.6s linear infinite;
+          mask-image:radial-gradient(circle, #000 58%, transparent 74%);
+          pointer-events:none;
         }
 
-        @keyframes bnSpin{
-          from{ transform: rotate(0deg); }
-          to{ transform: rotate(360deg); }
-        }
+        @keyframes bnSpin{to{transform:rotate(360deg)}}
         @keyframes bnPulse{
-          0%,100%{ transform: scale(.98); opacity: var(--glow-opacity); }
-          50%{ transform: scale(1.03); opacity: calc(var(--glow-opacity) * .86); }
+          0%,100%{transform:scale(.985);opacity:var(--glow-opacity)}
+          50%{transform:scale(1.02);opacity:calc(var(--glow-opacity)*.86)}
         }
 
-        /* ✅ Simple: sparkle OFF total */
         body[data-ui="simple"] .bn-glow,
         body[data-ui="simple"] .bn-rays{
-          display: none !important;
-          animation: none !important;
+          display:none!important;
+          animation:none!important;
         }
 
-        /* ✅ Medium: sparkle lebih halus */
-        body[data-ui="medium"] .bn-rays{ opacity: calc(var(--rays-opacity) * .75); }
-        body[data-ui="medium"] .bn-glow{ opacity: calc(var(--glow-opacity) * .80); }
-
-        /* ✅ Complex: sedikit lebih kuat */
-        body[data-ui="complex"] .bn-rays{ opacity: calc(var(--rays-opacity) * 1.05); }
-        body[data-ui="complex"] .bn-glow{ opacity: calc(var(--glow-opacity) * 1.00); }
-
-        /* =========================================
-           Icon/Image (lebih besar)
-           ========================================= */
         .bn-badge-img{
-          width: 150px;
-          height: 150px;
-          object-fit: contain;
-          z-index: 2;
-          filter: drop-shadow(0 12px 20px rgba(0,0,0,.26));
+          width:150px;
+          height:150px;
+          object-fit:contain;
+          z-index:2;
+          filter:drop-shadow(0 12px 20px rgba(0,0,0,.26));
         }
 
         .bn-badge-emoji{
-          font-size: 78px;
-          line-height: 1;
-          z-index: 2;
-          filter: drop-shadow(0 12px 20px rgba(0,0,0,.22));
+          font-size:78px;
+          z-index:2;
+          filter:drop-shadow(0 12px 20px rgba(0,0,0,.22));
         }
 
         @keyframes bnFloat{
-          0%,100%{ transform: translateY(0) scale(1); }
-          50%{ transform: translateY(-6px) scale(1.02); }
+          0%,100%{transform:translateY(0) scale(1)}
+          50%{transform:translateY(-6px) scale(1.02)}
         }
         body[data-ui="complex"] .bn-badge-img,
         body[data-ui="complex"] .bn-badge-emoji{
-          animation: bnFloat 1.8s ease-in-out infinite;
+          animation:bnFloat 1.8s ease-in-out infinite;
         }
 
-        /* =========================================
-           Text (lebih jelas)
-           ========================================= */
         .bn-badge-title{
-          margin-top: 10px;
-          font-size: 22px;
-          font-weight: 900;
-          color: var(--text);
+          margin-top:10px;
+          font-size:22px;
+          font-weight:900;
+          color:var(--text);
         }
         .bn-badge-detail{
-          margin-top: 8px;
-          font-size: 14px;
-          color: var(--text);
-          opacity: .90;
+          margin-top:8px;
+          font-size:14px;
+          color:var(--text);
+          opacity:.9;
         }
 
-        @media (prefers-reduced-motion: reduce){
-          .bn-badge-overlay, .bn-badge-card, .bn-rays, .bn-glow,
-          body[data-ui="complex"] .bn-badge-img,
-          body[data-ui="complex"] .bn-badge-emoji{
-            animation: none !important;
-          }
+        @media (prefers-reduced-motion:reduce){
+          *{animation:none!important}
         }
       `}</style>
 
@@ -229,28 +241,30 @@ export default function BadgeUnlockPopup({ badgeId, meta, onClose }) {
         ref={cardRef}
         className="bn-badge-card"
         style={{
-          width: "min(560px, 92vw)",
-          textAlign: "center",
-          cursor: "pointer",
-
           ["--glow-opacity"]: g.glow,
           ["--rays-opacity"]: g.rays,
           ["--glow-blur"]: `${g.blur}px`,
         }}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         onClick={(e) => {
           e.stopPropagation();
           onClose?.();
         }}
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
       >
         <div className="bn-badge-hero">
           <div className="bn-glow" />
           <div className="bn-rays" />
 
-          {iconUrl ? (
-            <img src={iconUrl} alt={label} className="bn-badge-img" />
+          {iconUrl && imgReady ? (
+            <img
+              key={iconUrl}
+              src={iconUrl}
+              alt={label}
+              className="bn-badge-img"
+              decoding="async"
+            />
           ) : (
             <div className="bn-badge-emoji" aria-hidden="true">
               {iconEmoji}
@@ -259,7 +273,7 @@ export default function BadgeUnlockPopup({ badgeId, meta, onClose }) {
         </div>
 
         <div className="bn-badge-title ui-title">{label}</div>
-        {detail ? <div className="bn-badge-detail">{detail}</div> : null}
+        {detail && <div className="bn-badge-detail">{detail}</div>}
 
         <div className="mt-4 text-xs ui-muted" style={{ opacity: 0.9 }}>
           Tap untuk lanjut

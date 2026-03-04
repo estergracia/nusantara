@@ -1,4 +1,3 @@
-// src/utils/progressStore.js
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase.js";
 import { getJSON, setJSON, KEYS, defaultStats } from "./storage.js";
@@ -34,16 +33,11 @@ const CAMPAIGN_TOTAL = 45;
 
 /**
  * Normalize stats to latest schema without wiping user progress.
- * - keeps existing values
- * - ensures all nested objects exist
- * - coerces numbers
- * - ✅ clamps campaign progress (0..45) and never > attemptCap
  */
 function normalizeStats(input) {
   const defs = defaultStats();
   const s = isObj(input) ? input : {};
 
-  // merge shallow dulu
   const out = { ...defs, ...s };
 
   // primitives
@@ -68,17 +62,20 @@ function normalizeStats(input) {
   out.globalLevel = clamp(num(out.globalLevel), 0, CAMPAIGN_TOTAL);
   out.globalLevelMax = clamp(num(out.globalLevelMax), 0, CAMPAIGN_TOTAL);
 
-  // ✅ kalau dulu bug bikin globalLevel > attemptCap, kita turunkan
   out.globalLevel = Math.min(out.globalLevel, attemptCap);
   out.globalLevelMax = Math.min(out.globalLevelMax, attemptCap);
 
-  // ✅ kalau globalLevel belum ada tapi attempt sudah ada, isi dari attemptCap (biar badge & progress konsisten)
   if (!out.globalLevel && attemptCap > 0) out.globalLevel = attemptCap;
   if (!out.globalLevelMax && attemptCap > 0) out.globalLevelMax = attemptCap;
 
-  // ✅ NEW: campaign state
+  // campaign state
   out.campaignStageIndex = num(out.campaignStageIndex);
-  out.campaignByMode = { easy: 0, normal: 0, hard: 0, ...(isObj(out.campaignByMode) ? out.campaignByMode : {}) };
+  out.campaignByMode = {
+    easy: 0,
+    normal: 0,
+    hard: 0,
+    ...(isObj(out.campaignByMode) ? out.campaignByMode : {}),
+  };
   for (const m of ["easy", "normal", "hard"]) {
     out.campaignByMode[m] = num(out.campaignByMode[m]);
   }
@@ -98,7 +95,6 @@ function normalizeStats(input) {
   out.lastRunModeStats = isObj(out.lastRunModeStats) ? out.lastRunModeStats : {};
   out._meta = { ...defs._meta, ...(isObj(out._meta) ? out._meta : {}) };
 
-  // coerce per-mode numeric
   for (const m of ["easy", "normal", "hard"]) {
     out.perfectByMode[m] = num(out.perfectByMode[m]);
     out.timeSumByMode[m] = num(out.timeSumByMode[m]);
@@ -107,13 +103,12 @@ function normalizeStats(input) {
 
     out.correctByMode[m] = num(out.correctByMode[m]);
     out.answeredByMode[m] = num(out.answeredByMode[m]);
-    out.accuracyByMode[m] = clamp(num(out.accuracyByMode[m]), 0, 1); // 0..1
+    out.accuracyByMode[m] = clamp(num(out.accuracyByMode[m]), 0, 1);
   }
 
   return out;
 }
 
-// deep merge untuk kasus nested object remote vs local
 function deepMergeStats(base, incoming) {
   const a = normalizeStats(base);
   const b = normalizeStats(incoming);
@@ -152,13 +147,28 @@ export async function loadStats(uid) {
       const remote = normalizeStats(remoteRaw);
 
       const localDirty = !!local?._meta?.dirty;
-
       const merged = localDirty ? deepMergeStats(remote, local) : deepMergeStats(local, remote);
-
       merged._meta = { ...(merged._meta || {}), dirty: localDirty ? true : false };
 
       setJSON(statsKey(uid), merged);
       return merged;
+    }
+
+    // ✅ FIX: kalau remote belum ada, JANGAN overwrite local yang sudah punya progress
+    const hasLocalProgress =
+      num(local?.attemptTotal) > 0 ||
+      num(local?.correctTotal) > 0 ||
+      num(local?.scoreTotal) > 0 ||
+      !!local?.lastPlayedAt ||
+      !!local?._meta?.dirty;
+
+    if (hasLocalProgress) {
+      // optional: buat doc pertama kali supaya next load ada
+      try {
+        await setDoc(ref, { ...local, updatedAt: serverTimestamp() }, { merge: true });
+      } catch {}
+      setJSON(statsKey(uid), local);
+      return local;
     }
 
     const empty = normalizeStats(defaultStats());

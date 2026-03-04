@@ -24,7 +24,6 @@ export default function Splash() {
       <div className="min-h-[70vh] flex items-center justify-center px-4">
         <div className="w-full max-w-md space-y-4">
           <section className="ui-card ui-card--pattern p-6 text-center">
-            <div className="text-5xl">🇮🇩</div>
             <div className="ui-title text-3xl font-extrabold mt-2">Belajar Nusantara</div>
             <button type="button" onClick={goLogin} className="ui-btn ui-btn--primary mt-6 w-full">
               Mulai / Masuk
@@ -41,7 +40,6 @@ export default function Splash() {
         <div className="w-full max-w-lg space-y-4">
           <section className="ui-card ui-card--pattern p-7">
             <div className="text-center">
-              <div className="text-5xl">🇮🇩</div>
               <div className="ui-title text-3xl font-extrabold mt-2">Belajar Nusantara</div>
               <div className="mt-2 text-sm ui-muted">
                 Belajar budaya Nusantara lewat materi singkat dan kuis cepat.

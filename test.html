@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nusantara Runner — Endless Terrain + 2 Dialog + Quiz Popup (Three.js)</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel: rgba(10,18,35,.82);
+      --line: rgba(64,92,140,.55);
+      --text:#eaf2ff;
+      --muted:#a8b3c7;
+      --good:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:var(--font); overflow:hidden;}
+    #app{position:fixed; inset:0;}
+    canvas{display:block;}
+
+    /* HUD */
+    #hud{
+      position:fixed; top:14px; left:14px;
+      z-index:10;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:10px 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      pointer-events:none;
+      min-width:220px;
+    }
+    .hudRow{display:flex; justify-content:space-between; align-items:center; gap:12px;}
+    .hearts{display:flex; gap:6px; align-items:center;}
+    .heart{width:16px; height:16px; opacity:.95; filter: drop-shadow(0 3px 8px rgba(0,0,0,.4));}
+    .heart.off{opacity:.25;}
+    .small{font-size:12px; color:var(--muted); font-weight:800;}
+    .big{font-size:13px; font-weight:1000;}
+    .bar{height:10px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.10); overflow:hidden;}
+    .bar > div{height:100%; width:0%; background:linear-gradient(90deg, rgba(34,197,94,.95), rgba(59,130,246,.85)); transition:width .2s ease;}
+    .barWrap{margin-top:8px;}
+    .barLabel{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-bottom:6px;}
+
+    /* Dialog base (shared) */
+    .dialogRpg{
+      position:fixed;
+      left:14px; right:14px; bottom:14px;
+      z-index:20;
+      pointer-events:auto;
+      display:none;
+    }
+    .dialogRpg.show{display:block;}
+    .dialogBox{
+      background:linear-gradient(180deg, rgba(12,22,45,.90), rgba(10,18,35,.78));
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      overflow:hidden;
+    }
+    .dialogInner{
+      display:grid;
+      grid-template-columns: 138px 1fr;
+      gap:12px;
+      padding:12px;
+      align-items:stretch;
+    }
+    .portraitWrap{
+      border-radius:18px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      min-height:128px;
+      position:relative;
+    }
+    .portraitImg{width:100%; height:100%; object-fit:cover;}
+    .namePlate{
+      position:absolute;
+      left:10px; bottom:10px;
+      background:rgba(10,18,35,.75);
+      border:1px solid rgba(255,255,255,.12);
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:1000;
+      font-size:12px;
+    }
+    .textWrap{padding:4px 6px 6px 0; min-height:128px;}
+    .speakerRow{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+    .speakerName{font-weight:1100; font-size:14px;}
+    .speakerHint{font-size:12px; color:var(--muted); font-weight:800;}
+    .dialogText{
+      margin-top:8px;
+      font-size:16px;
+      line-height:1.5;
+      min-height:70px;
+      opacity:1;
+      transition:opacity .22s ease;
+      position:relative;
+      padding-right:30px;
+    }
+    .dialogText.fadeOut{opacity:0;}
+    .nextHint{
+      position:absolute; right:10px; bottom:6px;
+      color:rgba(255,255,255,.65);
+      animation:bob 1s infinite ease-in-out;
+      display:none;
+      user-select:none;
+    }
+    .nextHint.show{display:block;}
+    @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+
+    /* Quiz Overlay */
+    #quizOverlay{
+      position:fixed; inset:0;
+      z-index:30;
+      display:none;
+      align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+      pointer-events:auto;
+    }
+    #quizOverlay.show{display:flex;}
+    .quizPanel{
+      width:min(880px, calc(100% - 24px));
+      background:rgba(10,18,35,.88);
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .quizHeader{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      background:linear-gradient(180deg, rgba(12,22,45,.95), rgba(10,18,35,.70));
+    }
+    .quizTitle{font-weight:1100; font-size:16px;}
+    .quizSub{color:var(--muted); font-weight:800; font-size:12px;}
+    .quizBody{padding:16px;}
+    .qBox{
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:14px;
+    }
+    .qText{font-weight:1000; margin:0 0 10px 0;}
+    .tokens{display:flex; flex-wrap:wrap; gap:8px;}
+    .token{
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+      padding:9px 12px;
+      border-radius:12px;
+      font-weight:1000;
+      cursor:pointer;
+      user-select:none;
+    }
+    .slot{
+      margin-top:10px;
+      border-radius:14px;
+      border:2px dashed rgba(168,179,199,.35);
+      min-height:44px;
+      display:flex; align-items:center; justify-content:center;
+      color:var(--muted);
+      font-weight:900;
+      background:rgba(0,0,0,.12);
+    }
+    .slot.filled{border-style:solid; border-color:rgba(59,130,246,.55); color:var(--text);}
+    .quizFooter{
+      padding:14px 16px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+    }
+    .btn{
+      appearance:none; border:none;
+      cursor:pointer;
+      border-radius:14px;
+      padding:10px 12px;
+      font-weight:1000;
+      font-size:13px;
+      color:var(--text);
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .btn.primary{background:rgba(59,130,246,.88); border-color:rgba(59,130,246,.88);}
+    .btn.good{background:rgba(34,197,94,.90); border-color:rgba(34,197,94,.90);}
+
+    /* Toast */
+    #toast{
+      position:fixed;
+      top:62px; left:50%; transform:translateX(-50%);
+      z-index:40;
+      background:rgba(10,18,35,.88);
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:10px 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    #toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hudRow">
+      <div>
+        <div class="small">HP</div>
+        <div class="hearts" id="hearts"></div>
+      </div>
+      <div style="text-align:right">
+        <div class="small">Coin</div>
+        <div class="big" id="hudCoin">0</div>
+      </div>
+    </div>
+    <div class="barWrap">
+      <div class="barLabel"><span>XP</span><span id="hudXpText">0 / 100</span></div>
+      <div class="bar"><div id="hudXpBar"></div></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Dialog 1: Sambutan -->
+  <div id="dialogWelcome" class="dialogRpg">
+    <div class="dialogBox">
+      <div class="dialogInner">
+        <div class="portraitWrap">
+          <img id="portraitWelcome" class="portraitImg" alt="portrait" />
+          <div id="namePlateWelcome" class="namePlate">NPC</div>
+        </div>
+        <div class="textWrap">
+          <div class="speakerRow">
+            <div class="speakerName" id="speakerNameWelcome">Penjaga</div>
+            <div class="speakerHint">Sambutan • Klik / Space</div>
+          </div>
+          <div id="dialogTextWelcome" class="dialogText">
+            <span id="typedWelcome"></span>
+            <span id="nextHintWelcome" class="nextHint">▾</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog 2: Gerbang Ujian Intro -->
+  <div id="dialogGate" class="dialogRpg">
+    <div class="dialogBox">
+      <div class="dialogInner">
+        <div class="portraitWrap">
+          <img id="portraitGate" class="portraitImg" alt="portrait" />
+          <div id="namePlateGate" class="namePlate">NPC</div>
+        </div>
+        <div class="textWrap">
+          <div class="speakerRow">
+            <div class="speakerName" id="speakerNameGate">Penjaga Gerbang</div>
+            <div class="speakerHint">Gerbang Ujian • Klik / Space</div>
+          </div>
+          <div id="dialogTextGate" class="dialogText">
+            <span id="typedGate"></span>
+            <span id="nextHintGate" class="nextHint">▾</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Popup -->
+  <div id="quizOverlay">
+    <div class="quizPanel">
+      <div class="quizHeader">
+        <div>
+          <div class="quizTitle" id="quizTitle">Gerbang Ujian</div>
+          <div class="quizSub" id="quizSub">Selesaikan tantangan untuk lanjut.</div>
+        </div>
+        <button class="btn" id="btnCloseQuiz">Tutup</button>
+      </div>
+      <div class="quizBody">
+        <div class="qBox">
+          <p class="qText" id="qText">Pertanyaan</p>
+          <div class="tokens" id="qTokens"></div>
+          <div class="slot" id="qSlot">Pilih jawaban</div>
+        </div>
+      </div>
+      <div class="quizFooter">
+        <div class="quizSub" id="quizProgress">Q1/3 • Benar 0</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn primary" id="btnCheck">Cek Jawaban</button>
+          <button class="btn good" id="btnNextQ" style="display:none;">Lanjut</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+    // ===== Data demo (ganti dengan nusantaraData kamu) =====
+    const nusantaraData = [
+      { id:"aceh", island:"Sumatera", province:"Aceh", capital:"Banda Aceh", traditionalHouse:"Rumoh Aceh", traditionalDance:"Tari Saman", traditionalFood:"Mie Aceh" },
+      { id:"dki-jakarta", island:"Jawa", province:"DKI Jakarta", capital:"Jakarta", traditionalHouse:"Rumah Kebaya", traditionalDance:"Tari Topeng Betawi", traditionalFood:"Kerak Telor" },
+      { id:"kalimantan-selatan", island:"Kalimantan", province:"Kalimantan Selatan", capital:"Banjarbaru", traditionalHouse:"Rumah adat Bubungan Tinggi", traditionalDance:"Tari Baksa Kembang", traditionalFood:"Soto Banjar" },
+    ];
+
+    const shuffle = (arr)=>arr.map(x=>({x,r:Math.random()})).sort((a,b)=>a.r-b.r).map(o=>o.x);
+    const pick = (arr)=>arr[Math.floor(Math.random()*arr.length)];
+    const norm = (s)=> (s??"").toString().trim().toLowerCase().replace(/\s+/g," ");
+
+    // ===== Portrait placeholder (aman, tanpa template literal panjang) =====
+    function svgPortrait(bg = "#1e3a8a", hair = "#22c55e", skin = "#fde68a") {
+      const svg = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="420">',
+        "  <defs>",
+        '    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">',
+        '      <stop offset="0" stop-color="' + bg + '"/>',
+        '      <stop offset="1" stop-color="#0b1220"/>',
+        "    </linearGradient>",
+        "  </defs>",
+        '  <rect width="100%" height="100%" fill="url(#g)"/>',
+        '  <circle cx="160" cy="185" r="85" fill="' + skin + '"/>',
+        '  <path d="M85,160 C110,60 210,60 235,160 C220,135 200,125 160,125 C120,125 100,135 85,160Z" fill="' + hair + '"/>',
+        '  <circle cx="130" cy="185" r="10" fill="#111827"/>',
+        '  <circle cx="195" cy="185" r="10" fill="#111827"/>',
+        '  <path d="M150,225 C160,235 170,235 180,225" fill="none" stroke="#111827" stroke-width="6" stroke-linecap="round"/>',
+        '  <rect x="95" y="280" width="130" height="120" rx="22" fill="#60a5fa" opacity="0.9"/>',
+        "</svg>",
+      ].join("\n");
+      return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+    }
+
+    // ===== UI refs =====
+    const toastEl = document.getElementById("toast");
+    const heartsEl = document.getElementById("hearts");
+    const hudCoinEl = document.getElementById("hudCoin");
+    const hudXpText = document.getElementById("hudXpText");
+    const hudXpBar = document.getElementById("hudXpBar");
+
+    const dialogWelcome = document.getElementById("dialogWelcome");
+    const portraitWelcome = document.getElementById("portraitWelcome");
+    const namePlateWelcome = document.getElementById("namePlateWelcome");
+    const speakerNameWelcome = document.getElementById("speakerNameWelcome");
+    const dialogTextWelcome = document.getElementById("dialogTextWelcome");
+    const typedWelcome = document.getElementById("typedWelcome");
+    const nextHintWelcome = document.getElementById("nextHintWelcome");
+
+    const dialogGate = document.getElementById("dialogGate");
+    const portraitGate = document.getElementById("portraitGate");
+    const namePlateGate = document.getElementById("namePlateGate");
+    const speakerNameGate = document.getElementById("speakerNameGate");
+    const dialogTextGate = document.getElementById("dialogTextGate");
+    const typedGate = document.getElementById("typedGate");
+    const nextHintGate = document.getElementById("nextHintGate");
+
+    const quizOverlay = document.getElementById("quizOverlay");
+    const quizTitle = document.getElementById("quizTitle");
+    const quizSub = document.getElementById("quizSub");
+    const qText = document.getElementById("qText");
+    const qTokens = document.getElementById("qTokens");
+    const qSlot = document.getElementById("qSlot");
+    const quizProgress = document.getElementById("quizProgress");
+    const btnCloseQuiz = document.getElementById("btnCloseQuiz");
+    const btnCheck = document.getElementById("btnCheck");
+    const btnNextQ = document.getElementById("btnNextQ");
+
+    // ===== Toast =====
+    let toastTimer=null;
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>toastEl.classList.remove("show"), 1100);
+    }
+
+    // ===== State =====
+    const state = {
+      hpMax: 5,
+      hp: 5,
+      coin: 0,
+      xp: 0,
+      xpMax: 100,
+      paused: false,
+      phase: "RUN", // RUN | TALK_WELCOME | TALK_GATE | QUIZ
+      typing: false,
+
+      provIndex: 0,
+      currentProvince: null,
+
+      // dialogs
+      welcomeLines: [],
+      welcomeIndex: 0,
+      gateLines: [],
+      gateIndex: 0,
+
+      // quiz
+      quizQ: [],
+      qi: 0,
+      correct: 0,
+      selected: null,
+    };
+
+    function renderHud(){
+      heartsEl.innerHTML = "";
+      for(let i=0;i<state.hpMax;i++){
+        const s = document.createElement("span");
+        s.className = "heart" + (i < state.hp ? "" : " off");
+        s.innerHTML =
+          '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
+          '<path fill="#ef4444" d="M12 21s-7-4.35-9.33-8.28C.46 9.39 2.24 6 5.8 6c1.74 0 3.11.9 4.02 2.02C10.73 6.9 12.1 6 13.84 6c3.56 0 5.34 3.39 3.13 6.72C19 16.65 12 21 12 21z"/>' +
+          "</svg>";
+        heartsEl.appendChild(s);
+      }
+      hudCoinEl.textContent = String(state.coin);
+      hudXpText.textContent = state.xp + " / " + state.xpMax;
+      hudXpBar.style.width = Math.min(100, (state.xp/state.xpMax)*100) + "%";
+    }
+
+    // ===== Dialog helpers =====
+    async function typeText(targetTypedEl, targetNextHint, text, speed=18){
+      state.typing = true;
+      targetTypedEl.textContent = "";
+      targetNextHint.classList.remove("show");
+      for(let i=0;i<text.length;i++){
+        if(!state.typing) break;
+        targetTypedEl.textContent += text[i];
+        await new Promise(r=>setTimeout(r, speed));
+      }
+      targetTypedEl.textContent = text;
+      state.typing = false;
+      targetNextHint.classList.add("show");
+    }
+
+    async function showLine(dialogEls, line){
+      dialogEls.dialogText.classList.add("fadeOut");
+      await new Promise(r=>setTimeout(r, 160));
+      dialogEls.dialogText.classList.remove("fadeOut");
+
+      dialogEls.speakerName.textContent = line.speaker;
+      dialogEls.namePlate.textContent = line.speaker;
+      dialogEls.portrait.src = line.portraitSrc;
+
+      await typeText(dialogEls.typed, dialogEls.nextHint, line.text, 18);
+    }
+
+    function openDialog(el){ el.classList.add("show"); }
+    function closeDialog(el){ el.classList.remove("show"); }
+
+    const welcomeEls = {
+      root: dialogWelcome,
+      portrait: portraitWelcome,
+      namePlate: namePlateWelcome,
+      speakerName: speakerNameWelcome,
+      dialogText: dialogTextWelcome,
+      typed: typedWelcome,
+      nextHint: nextHintWelcome
+    };
+    const gateEls = {
+      root: dialogGate,
+      portrait: portraitGate,
+      namePlate: namePlateGate,
+      speakerName: speakerNameGate,
+      dialogText: dialogTextGate,
+      typed: typedGate,
+      nextHint: nextHintGate
+    };
+
+    function buildWelcomeConversation(p){
+      const npcPortrait = svgPortrait("#1e3a8a", "#60a5fa");
+      const playerPortrait = svgPortrait("#0f766e", "#22c55e");
+      return [
+        { speaker:"Penjaga", portraitSrc:npcPortrait, text:"Halo, petualang. Kamu sudah tiba di " + p.province + "." },
+        { speaker:"Penjaga", portraitSrc:npcPortrait, text:"Terus berjalan. Kamu akan menemukan gerbang ujian di depan." },
+        { speaker:"Petualang", portraitSrc:playerPortrait, text:"Siap! Aku akan melanjutkan perjalanan." },
+      ];
+    }
+
+    function buildGateIntro(p){
+      const npcPortrait = svgPortrait("#1e3a8a", "#60a5fa");
+      return [
+        { speaker:"Penjaga Gerbang", portraitSrc:npcPortrait, text:"Gerbang Ujian " + p.province + " ada di depanmu." },
+        { speaker:"Penjaga Gerbang", portraitSrc:npcPortrait, text:"Jawab 3 pertanyaan untuk membuka jalan." },
+      ];
+    }
+
+    async function startWelcomeConversation(){
+      state.phase = "TALK_WELCOME";
+      state.paused = true;
+      state.welcomeIndex = 0;
+      state.welcomeLines = buildWelcomeConversation(state.currentProvince);
+
+      closeDialog(gateEls.root);
+      openDialog(welcomeEls.root);
+      await showLine(welcomeEls, state.welcomeLines[0]);
+    }
+
+    async function nextWelcomeConversation(){
+      if (state.phase !== "TALK_WELCOME") return;
+
+      if (state.typing){
+        state.typing = false;
+        typedWelcome.textContent = state.welcomeLines[state.welcomeIndex].text;
+        nextHintWelcome.classList.add("show");
+        return;
+      }
+
+      state.welcomeIndex++;
+      if (state.welcomeIndex >= state.welcomeLines.length){
+        closeDialog(welcomeEls.root);
+        state.paused = false;
+        state.phase = "RUN";
+        return;
+      }
+      await showLine(welcomeEls, state.welcomeLines[state.welcomeIndex]);
+    }
+
+    async function startGateConversation(){
+      state.phase = "TALK_GATE";
+      state.paused = true;
+      state.gateIndex = 0;
+      state.gateLines = buildGateIntro(state.currentProvince);
+
+      closeDialog(welcomeEls.root);
+      openDialog(gateEls.root);
+      await showLine(gateEls, state.gateLines[0]);
+    }
+
+    async function nextGateConversation(){
+      if (state.phase !== "TALK_GATE") return;
+
+      if (state.typing){
+        state.typing = false;
+        typedGate.textContent = state.gateLines[state.gateIndex].text;
+        nextHintGate.classList.add("show");
+        return;
+      }
+
+      state.gateIndex++;
+      if (state.gateIndex >= state.gateLines.length){
+        closeDialog(gateEls.root);
+        openQuiz();
+        return;
+      }
+      await showLine(gateEls, state.gateLines[state.gateIndex]);
+    }
+
+    dialogWelcome.addEventListener("click", ()=> nextWelcomeConversation());
+    dialogGate.addEventListener("click", ()=> nextGateConversation());
+    window.addEventListener("keydown", (e)=>{
+      if (e.code === "Space"){
+        e.preventDefault();
+        if (state.phase === "TALK_WELCOME") nextWelcomeConversation();
+        if (state.phase === "TALK_GATE") nextGateConversation();
+      }
+    });
+
+    // ===== Quiz =====
+    function buildQuiz(p){
+      const pool = nusantaraData.filter(x=>x.id!==p.id);
+
+      const q1 = {
+        prompt:"Pilih Ibu Kota dari " + p.province,
+        answer:p.capital,
+        options: shuffle([p.capital, pick(pool).capital, pick(pool).capital].filter(Boolean).slice(0,3))
+      };
+      const q2 = {
+        prompt:"Pilih Rumah Adat milik " + p.province,
+        answer:p.traditionalHouse,
+        options: shuffle([p.traditionalHouse, pick(pool).traditionalHouse, pick(pool).traditionalHouse].filter(Boolean).slice(0,3))
+      };
+      const q3 = {
+        prompt:"Pilih Makanan Khas milik " + p.province,
+        answer:p.traditionalFood,
+        options: shuffle([p.traditionalFood, pick(pool).traditionalFood, pick(pool).traditionalFood].filter(Boolean).slice(0,3))
+      };
+      return [q1,q2,q3];
+    }
+
+    function openQuiz(){
+      closeDialog(welcomeEls.root);
+      closeDialog(gateEls.root);
+
+      state.phase = "QUIZ";
+      state.paused = true;
+
+      state.quizQ = buildQuiz(state.currentProvince);
+      state.qi = 0;
+      state.correct = 0;
+      state.selected = null;
+
+      quizTitle.textContent = "Gerbang Ujian: " + state.currentProvince.province;
+      quizSub.textContent = "Jawab 3 pertanyaan untuk lanjut.";
+      quizOverlay.classList.add("show");
+      renderQuizQuestion();
+    }
+
+    function closeQuiz(){
+      quizOverlay.classList.remove("show");
+      state.phase = "RUN";
+      state.paused = false;
+    }
+
+    function renderQuizQuestion(){
+      const q = state.quizQ[state.qi];
+      state.selected = null;
+      qText.textContent = "Q" + (state.qi+1) + "/3 — " + q.prompt;
+      qTokens.innerHTML = "";
+      qSlot.className = "slot";
+      qSlot.textContent = "Pilih jawaban";
+
+      q.options.forEach(opt=>{
+        const el = document.createElement("div");
+        el.className = "token";
+        el.textContent = opt;
+        el.addEventListener("click", ()=>{
+          state.selected = opt;
+          qSlot.classList.add("filled");
+          qSlot.textContent = opt;
+          [...qTokens.children].forEach(c=>c.style.outline="none");
+          el.style.outline = "2px solid rgba(245,158,11,.75)";
+        });
+        qTokens.appendChild(el);
+      });
+
+      quizProgress.textContent = "Q" + (state.qi+1) + "/3 • Benar " + state.correct;
+      btnNextQ.style.display = "none";
+      btnCheck.style.display = "";
+    }
+
+    btnCheck.addEventListener("click", ()=>{
+      if (state.phase !== "QUIZ") return;
+      const q = state.quizQ[state.qi];
+      if (!state.selected){ toast("Pilih jawaban dulu."); return; }
+
+      const ok = norm(state.selected) === norm(q.answer);
+      if (ok){
+        toast("Benar! +10 coin, +10 XP");
+        state.correct++;
+        state.coin += 10;
+        state.xp = Math.min(state.xpMax, state.xp + 10);
+      } else {
+        toast("Salah. -1 HP");
+        state.hp = Math.max(1, state.hp - 1);
+      }
+      renderHud();
+      btnCheck.style.display = "none";
+      btnNextQ.style.display = "";
+    });
+
+    btnNextQ.addEventListener("click", ()=>{
+      state.qi++;
+      if (state.qi >= 3){
+        toast("Selesai! Skor benar: " + state.correct + "/3");
+        closeQuiz();
+        scheduleNextProvince(); // ✅ lanjut terus tanpa reset arena
+        return;
+      }
+      renderQuizQuestion();
+    });
+
+    btnCloseQuiz.addEventListener("click", ()=> closeQuiz());
+
+    // ===== Three.js setup =====
+    const app = document.getElementById("app");
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    app.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b1220);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 800);
+    camera.position.set(0, 7.0, 14);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x223355, 0.95));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.05);
+    dirLight.position.set(8, 14, 8);
+    scene.add(dirLight);
+
+    // Runner
+    const runner = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.0, 1.6, 1.0),
+      new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness:0.5 })
+    );
+    body.position.set(0, 1.1, 0);
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 18, 18),
+      new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness:0.4 })
+    );
+    head.position.set(0, 2.15, 0);
+    runner.add(body, head);
+    scene.add(runner);
+
+    // ===== Terrain endless: rumput+batunya hanya pinggir; tanah coklat turun ke bawah =====
+    const terrainGroup = new THREE.Group();
+    scene.add(terrainGroup);
+
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x2f6b3a, roughness: 0.95 });
+    const edgeGrassMat = new THREE.MeshStandardMaterial({ color: 0x2a7b34, roughness: 0.98 });
+    const dirtMat  = new THREE.MeshStandardMaterial({ color: 0x6b4f2a, roughness: 0.98 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x2a3548, roughness: 0.9 });
+
+    const SEG_LEN = 10;
+    const SEG_COUNT = 18;     // visible length ~ 180
+    const ROAD_WIDTH = 7;
+    const EDGE_W = 0.9;
+    const DIRT_DEPTH = 30;    // ✅ besar supaya tidak tampak mengambang
+
+    const segments = [];
+    let terrainEndX = 0;
+
+    function makeTerrainSegment(xStart, idx){
+      const g = new THREE.Group();
+      g.position.x = xStart;
+
+      // top grass
+      const topH = 0.25;
+      const top = new THREE.Mesh(new THREE.BoxGeometry(SEG_LEN, topH, ROAD_WIDTH), grassMat);
+      top.position.set(SEG_LEN/2, 0.0, 0);
+      g.add(top);
+
+      // deep dirt column
+      const dirt = new THREE.Mesh(new THREE.BoxGeometry(SEG_LEN, DIRT_DEPTH, ROAD_WIDTH), dirtMat);
+      dirt.position.set(SEG_LEN/2, -DIRT_DEPTH/2 - topH/2 + 0.02, 0);
+      g.add(dirt);
+
+      // edge strips only
+      const edgeL = new THREE.Mesh(new THREE.BoxGeometry(SEG_LEN, 0.20, EDGE_W), edgeGrassMat);
+      edgeL.position.set(SEG_LEN/2, 0.10, -(ROAD_WIDTH/2) + EDGE_W/2);
+      g.add(edgeL);
+
+      const edgeR = new THREE.Mesh(new THREE.BoxGeometry(SEG_LEN, 0.20, EDGE_W), edgeGrassMat);
+      edgeR.position.set(SEG_LEN/2, 0.10, (ROAD_WIDTH/2) - EDGE_W/2);
+      g.add(edgeR);
+
+      // stones on edges only
+      const stonesToAdd = 2 + Math.floor(Math.random()*3);
+      for (let s=0; s<stonesToAdd; s++){
+        const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + Math.random()*0.22), stoneMat);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const z = side * (ROAD_WIDTH/2 + 0.15 + Math.random()*0.35);
+        const x = 1 + Math.random()*(SEG_LEN-2);
+        stone.position.set(x, 0.08, z);
+        stone.rotation.set(Math.random()*Math.PI, Math.random()*MathPI, Math.random()*Math.PI);
+        g.add(stone);
+      }
+
+      // tiny tufts only edges (optional)
+      const tufts = 2 + Math.floor(Math.random()*3);
+      for (let t=0; t<tufts; t++){
+        const tuft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18 + Math.random()*0.25, 0.08), edgeGrassMat);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        tuft.position.set(1 + Math.random()*(SEG_LEN-2), 0.10, side*(ROAD_WIDTH/2 + Math.random()*0.3));
+        g.add(tuft);
+      }
+
+      g.position.y = (Math.sin((idx+1)*0.6)*0.015) + (Math.random()*0.01);
+      return g;
+    }
+
+    function initTerrain(){
+      for (let i=0;i<SEG_COUNT;i++){
+        const seg = makeTerrainSegment(i*SEG_LEN, i);
+        terrainGroup.add(seg);
+        segments.push(seg);
+      }
+      terrainEndX = SEG_COUNT * SEG_LEN;
+    }
+
+    function recycleTerrainIfNeeded(){
+      const threshold = runner.position.x - 30;
+      const first = segments[0];
+      if (first.position.x + SEG_LEN < threshold){
+        const moved = segments.shift();
+        moved.position.x = terrainEndX;
+        terrainEndX += SEG_LEN;
+
+        // keep first 4 children = top+dirt+2 edges; rebuild props only
+        while (moved.children.length > 4){
+          moved.remove(moved.children[moved.children.length-1]);
+        }
+        const stonesToAdd = 2 + Math.floor(Math.random()*3);
+        for (let s=0; s<stonesToAdd; s++){
+          const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + Math.random()*0.22), stoneMat);
+          const side = Math.random() < 0.5 ? -1 : 1;
+          const z = side * (ROAD_WIDTH/2 + 0.15 + Math.random()*0.35);
+          const x = 1 + Math.random()*(SEG_LEN-2);
+          stone.position.set(x, 0.08, z);
+          stone.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+          moved.add(stone);
+        }
+        const tufts = 2 + Math.floor(Math.random()*3);
+        for (let t=0; t<tufts; t++){
+          const tuft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18 + Math.random()*0.25, 0.08), edgeGrassMat);
+          const side = Math.random() < 0.5 ? -1 : 1;
+          tuft.position.set(1 + Math.random()*(SEG_LEN-2), 0.10, side*(ROAD_WIDTH/2 + Math.random()*0.3));
+          moved.add(tuft);
+        }
+        moved.position.y = (Math.sin((terrainEndX/SEG_LEN)*0.55)*0.015) + (Math.random()*0.01);
+
+        segments.push(moved);
+      }
+    }
+
+    // ===== Endless stage objects: NPC + Gate keep moving forward =====
+    let npcTriggered = false;
+    let gateTriggered = false;
+
+    let npcX = 22;
+    let gateX = 44;
+
+    const GAP_AFTER_QUIZ = 70;
+    const GAP_NPC_TO_GATE = 22;
+
+    const npcMarker = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55,0.55,2.0,14),
+      new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent:true, opacity:0.25 })
+    );
+    npcMarker.position.set(npcX, 1.05, 0);
+    scene.add(npcMarker);
+
+    // Gate rotated 30 degrees
+    const gateGroup = new THREE.Group();
+    const gateMat = new THREE.MeshStandardMaterial({ color: 0x1f3b5d, roughness:0.75 });
+
+    const pillarGeo = new THREE.BoxGeometry(0.7, 4.2, 0.7);
+    const lintelGeo = new THREE.BoxGeometry(4.0, 0.7, 0.7);
+
+    const g1 = new THREE.Mesh(pillarGeo, gateMat); g1.position.set(-1.8, 2.1, 0);
+    const g2 = new THREE.Mesh(pillarGeo, gateMat); g2.position.set( 1.8, 2.1, 0);
+    const topGate = new THREE.Mesh(lintelGeo, gateMat); topGate.position.set(0, 4.0, 0);
+    gateGroup.add(g1,g2,topGate);
+    gateGroup.position.set(gateX, 0, 0);
+    gateGroup.rotation.y = THREE.MathUtils.degToRad(30); // ✅ 30°
+    scene.add(gateGroup);
+
+    function setCurrentProvince(){
+      state.currentProvince = nusantaraData[state.provIndex % nusantaraData.length];
+      state.provIndex++;
+    }
+
+    function placeNpcAndGate(baseX){
+      npcX = baseX;
+      gateX = baseX + GAP_NPC_TO_GATE;
+
+      npcMarker.position.x = npcX;
+      gateGroup.position.x = gateX;
+
+      npcTriggered = false;
+      gateTriggered = false;
+    }
+
+    function scheduleNextProvince(){
+      setCurrentProvince();
+      const base = Math.max(
+        runner.position.x + GAP_AFTER_QUIZ,
+        terrainEndX - (SEG_LEN*6)
+      );
+      placeNpcAndGate(base);
+      toast("Lanjut provinsi: " + state.currentProvince.province);
+    }
+
+    async function onNpcTrigger(){
+      if (npcTriggered) return;
+      npcTriggered = true;
+      await startWelcomeConversation();
+    }
+
+    async function onGateTrigger(){
+      if (gateTriggered) return;
+      gateTriggered = true;
+      await startGateConversation();
+    }
+
+    // ===== Start =====
+    function startRun(){
+      portraitWelcome.src = svgPortrait("#1e3a8a", "#60a5fa");
+      portraitGate.src = svgPortrait("#1e3a8a", "#60a5fa");
+      renderHud();
+
+      initTerrain();
+      setCurrentProvince();
+      placeNpcAndGate(22);
+      toast("Mulai: " + state.currentProvince.province);
+    }
+
+    // ===== Main loop =====
+    let last = performance.now();
+    const RUN_SPEED = 6.4;
+
+    function animate(){
+      const now = performance.now();
+      const dt = Math.min((now-last)/1000, 0.05);
+      last = now;
+
+      if (!state.paused){
+        runner.position.x += RUN_SPEED * dt;
+
+        camera.position.x = runner.position.x + 8.5;
+        camera.position.y = 7.0;
+        camera.lookAt(runner.position.x + 2.5, 1.4, 0);
+
+        recycleTerrainIfNeeded();
+
+        if (!npcTriggered && runner.position.x >= npcX - 1.0) onNpcTrigger();
+        if (!gateTriggered && runner.position.x >= gateX - 1.8) onGateTrigger();
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", ()=>{
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    startRun();
+    animate();
+  </script>
+</body>
+</html>

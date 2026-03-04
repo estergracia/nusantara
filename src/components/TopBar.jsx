@@ -77,7 +77,7 @@ export default function TopBar() {
           <div className="ui-topbar__left">
             {canShowBack ? (
               <button type="button" className="ui-pill" onClick={onBack}>
-                ← Back
+                Back
               </button>
             ) : (
               <div />

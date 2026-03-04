@@ -5,13 +5,21 @@ import useUiLevelFirestore from "../hooks/useUiLevelFirestore.js";
 import { CATEGORIES } from "../utils/routes.js";
 import { useProgress } from "../hooks/useProgress.js";
 
+import Telemetry from "../utils/telemetry.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
+
 export default function Categories() {
   const navigate = useNavigate();
   const location = useLocation();
   const { level, is } = useUiLevelFirestore();
   const { stats, updateStats } = useProgress();
+  const { currentUser } = useAuth();
+
+  const uiMode = is.simple ? "simple" : is.medium ? "medium" : "complex";
 
   useEffect(() => {
+    Telemetry.trackNavigation();
+
     const next = {
       ...stats,
       categoriesOpened: (stats.categoriesOpened || 0) + 1,
@@ -21,7 +29,14 @@ export default function Categories() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // kalau user ganti UI level di tengah app, update mode session
+  // useEffect(() => {
+  //   if (currentUser?.uid) Telemetry.startSession({ uid: currentUser.uid, mode: uiMode });
+  // }, [currentUser?.uid, uiMode]);
+
   const openCategory = (id) => {
+    Telemetry.trackClick();
+    Telemetry.trackNavigation();
     navigate({ pathname: `/learn/${id}`, search: location.search });
   };
 
@@ -30,7 +45,7 @@ export default function Categories() {
       <section className="ui-card ui-card--pattern ui-card--pad">
         <div className="text-2xl font-extrabold tracking-tight ">Categories</div>
         <p className="mt-1 text-sm ui-muted">
-          pilih topik yang paling familiar dulu agar lebih nyaman.
+          Pilih topik yang menurut kamu lebih menarik.
         </p>
       </section>
 
@@ -48,14 +63,6 @@ export default function Categories() {
         ))}
       </section>
 
-      {is.medium || is.complex ? (
-        <section className="ui-card ui-card--pattern ui-card--pad">
-          <div className="text-sm font-extrabold ui-title">Continue Learning</div>
-          <div className="mt-2 text-sm ui-muted">
-            Tip: setelah selesai Learn, tekan tombol <b className="ui-title">PLAY</b> untuk menguji ingatan.
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

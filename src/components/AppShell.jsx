@@ -14,7 +14,7 @@ export default function AppShell() {
       </main>
 
       <footer className="px-4 py-6 text-center text-xs ui-muted">
-        Belajar Nusantara — materi singkat & kuis budaya Indonesia.
+        Belajar Nusantara
       </footer>
     </div>
   );

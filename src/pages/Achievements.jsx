@@ -1,8 +1,10 @@
-// src/pages/Achievements.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BADGE_CATALOG } from "../utils/badgeCatalog.js";
 import { useProgress } from "../hooks/useProgress.js";
 import useUiLevelFirestore from "../hooks/useUiLevelFirestore.js";
+
+import Telemetry from "../utils/telemetry.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 function getEarnedIds(badges) {
   if (Array.isArray(badges)) return badges;
@@ -72,8 +74,6 @@ function BadgeRow({ x, onClick, showProgressBar }) {
             </div>
           ) : null}
         </div>
-
-        {/* ✅ panah dihapus */}
       </div>
     </button>
   );
@@ -82,6 +82,18 @@ function BadgeRow({ x, onClick, showProgressBar }) {
 export default function Achievements() {
   const { is } = useUiLevelFirestore();
   const { stats, badges } = useProgress();
+  const { currentUser } = useAuth();
+
+  const uiMode = is.simple ? "simple" : is.medium ? "medium" : "complex";
+
+  useEffect(() => {
+    Telemetry.trackNavigation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // useEffect(() => {
+  //   if (currentUser?.uid) Telemetry.startSession({ uid: currentUser.uid, mode: uiMode });
+  // }, [currentUser?.uid, uiMode]);
 
   const earnedIds = useMemo(() => getEarnedIds(badges), [badges]);
   const unlockedSet = useMemo(() => new Set(earnedIds), [earnedIds]);
@@ -120,11 +132,10 @@ export default function Achievements() {
   const unlockedCount = useMemo(() => items.filter((x) => x.unlocked).length, [items]);
 
   const pageClass = [
-    "space-y-4 bn-achievements bn-noselect", // ✅ no-select untuk seluruh halaman
+    "space-y-4 bn-achievements bn-noselect",
     is.complex ? "bn-achievements--complex" : "bn-achievements--medium",
   ].join(" ");
 
-  // ✅ SIMPLE: grid, klik badge TIDAK buka popup
   if (is.simple) {
     return (
       <div className="space-y-4 bn-achievements bn-achievements--simple bn-noselect">
@@ -145,7 +156,9 @@ export default function Achievements() {
                 type="button"
                 key={b.id}
                 className="ui-card ui-card--pattern p-3 flex flex-col items-center text-center bn-badgeGridItem bn-noselect"
-                onClick={() => {}}
+                onClick={() => {
+                  Telemetry.trackClick();
+                }}
                 style={{ opacity: x.unlocked ? 1 : 0.7 }}
               >
                 {iconSrc ? (
@@ -166,7 +179,6 @@ export default function Achievements() {
     );
   }
 
-  // ✅ MEDIUM/COMPLEX: list, klik row TIDAK buka popup
   return (
     <div className={pageClass}>
       <section className="ui-card ui-card--pattern p-6">
@@ -183,7 +195,9 @@ export default function Achievements() {
           <BadgeRow
             key={x.badge.id}
             x={x}
-            onClick={() => {}}
+            onClick={() => {
+              Telemetry.trackClick();
+            }}
             showProgressBar={Boolean(is.complex)}
           />
         ))}

@@ -65,9 +65,6 @@ export function makePlaceholderDataUri(labelTop, labelBottom) {
 }
 
 // mapping fieldKey -> folder kategori gambar
-// NOTE: folder ini dipakai untuk 2 tempat:
-// - src/assets/images/<folder>/<variant>/...  (diindex via glob)
-// - public/images/<folder>/<variant>/...      (fallback URL langsung)
 const FIELDKEY_TO_FOLDER = {
   iconicAnimal: "hewan-ikonik",
   traditionalHouse: "rumah-adat",
@@ -78,11 +75,33 @@ const FIELDKEY_TO_FOLDER = {
   traditionalFood: "makanan-khas",
 };
 
+// ✅ alias fieldKey lama (Indonesia) -> fieldKey canonical
+const FIELDKEY_ALIAS = {
+  hewanIkonik: "iconicAnimal",
+  rumahAdat: "traditionalHouse",
+  pakaianAdat: "traditionalClothes",
+  tarianDaerah: "traditionalDance",
+  alatMusik: "traditionalInstrument",
+  senjataDaerah: "traditionalWeapon",
+  makananKhas: "traditionalFood",
+};
+
+function canonFieldKey(fk) {
+  const raw = String(fk || "").trim();
+  return FIELDKEY_ALIAS[raw] || raw;
+}
+
 const CATEGORY_FOLDERS = new Set(Object.values(FIELDKEY_TO_FOLDER).map((x) => slugify(x)));
 const VARIANTS = new Set(["asli", "chibi"]);
 
 let _built = false;
 let _map = new Map(); // key -> url
+
+// ✅ memo cache hasil resolve (biar nggak ngitung ulang terus)
+let _memo = new Map(); // memoKey -> url|null
+
+// ✅ urutan ext public (kalau ternyata public kamu webp/jpg, ini lebih masuk akal dari hardcode png)
+const PUBLIC_EXTS = ["webp", "png", "jpg", "jpeg"];
 
 function buildIndexOnce() {
   if (_built) return;
@@ -91,15 +110,16 @@ function buildIndexOnce() {
   const glob = import.meta && typeof import.meta.glob === "function" ? import.meta.glob : null;
   if (!glob) return;
 
-  // index hanya di src/assets/images agar ringan
-  const mods = glob("../assets/images/**/*.{png,jpg,jpeg,webp}", {
-    eager: true,
-    as: "url",
-  });
+  // ✅ gabung pattern rel + abs biar aman di beberapa setup Vite
+  const modsRel = glob("../assets/images/**/*.{png,jpg,jpeg,webp}", { eager: true, as: "url" });
+  const modsAbs = glob("/src/assets/images/**/*.{png,jpg,jpeg,webp}", { eager: true, as: "url" });
+  const mods = { ...modsRel, ...modsAbs };
 
   for (const path in mods) {
     const url = mods[path];
-    const parts = String(path).split("/");
+    if (!url) continue;
+
+    const parts = String(path).replaceAll("\\", "/").split("/");
     const filename = parts[parts.length - 1] || "";
     const base = filename.replace(/\.(png|jpg|jpeg|webp)$/i, "");
     const baseNorm = slugify(base);
@@ -165,45 +185,60 @@ function resolveBy(catFolder, variant, keys = []) {
 
 /**
  * Resolve gambar 1 file = 1 provinsi:
- * file utama: <namaProvinsi>.png (atau jpg/webp) di folder kategori + variant
+ * - coba src/assets/images (via glob index)
+ * - kalau tidak ketemu, fallback ke public/images/...
  *
- * - SIMPLE => gunakan "asli"
- * - MEDIUM/COMPLEX => prefer "chibi", fallback "asli"
- *
- * ✅ Update penting:
- * - Tetap coba dari src/assets/images (via glob index)
- * - Kalau tidak ketemu, fallback ke public/images/...
- * - Prioritas pakai "province" dulu karena file public kamu namanya provinsi penuh (dash)
+ * Prioritas key: province dulu, lalu id
  */
 export function resolveImageForFieldKey({ fieldKey, variant, id, province }) {
-  const folder = FIELDKEY_TO_FOLDER[String(fieldKey || "")] || String(fieldKey || "");
+  const fk = canonFieldKey(fieldKey);
+  const folder = FIELDKEY_TO_FOLDER[String(fk || "")] || String(fk || "");
 
-  // keys untuk index src/assets (slugify underscore)
-  const keysIndex = [province, id].filter(Boolean); // ✅ province dulu
+  const memoKey = `${fk}|${variant || ""}|${id || ""}|${province || ""}`;
+  if (_memo.has(memoKey)) return _memo.get(memoKey);
+
+  const keysIndex = [province, id].filter(Boolean);
 
   // 1) coba index src/assets/images dulu
   const preferred = variant ? resolveBy(folder, variant, keysIndex) : null;
-  if (preferred) return preferred;
+  if (preferred) {
+    _memo.set(memoKey, preferred);
+    return preferred;
+  }
 
   // fallback ke asli kalau variant chibi tidak ada
   if (variant && slugify(variant) === "chibi") {
     const fb = resolveBy(folder, "asli", keysIndex);
-    if (fb) return fb;
+    if (fb) {
+      _memo.set(memoKey, fb);
+      return fb;
+    }
   }
 
   // last fallback: tanpa variant
   const any = resolveBy(folder, null, keysIndex);
-  if (any) return any;
+  if (any) {
+    _memo.set(memoKey, any);
+    return any;
+  }
 
-  // 2) ✅ fallback ke public/images (sesuai struktur file kamu)
-  // public pakai dash di filename: nusa-tenggara-barat.png
+  // 2) fallback ke public/images (BALIK KE PNG seperti kode kamu semula)
   const v = String(variant || "").toLowerCase() === "chibi" ? "chibi" : "asli";
 
   const provDash = dashify(province);
-  if (provDash) return `/images/${folder}/${v}/${provDash}.png`;
+  if (provDash) {
+    const url = `/images/${folder}/${v}/${provDash}.png`;
+    _memo.set(memoKey, url);
+    return url;
+  }
 
   const idDash = dashify(id);
-  if (idDash) return `/images/${folder}/${v}/${idDash}.png`;
+  if (idDash) {
+    const url = `/images/${folder}/${v}/${idDash}.png`;
+    _memo.set(memoKey, url);
+    return url;
+  }
 
+  _memo.set(memoKey, null);
   return null;
 }

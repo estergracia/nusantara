@@ -57,8 +57,7 @@ function sameSet(a, b) {
 }
 
 function unionIds(a, b) {
-  const out = Array.from(new Set([...safeArray(a), ...safeArray(b)].filter(Boolean)));
-  return out;
+  return Array.from(new Set([...safeArray(a), ...safeArray(b)].filter(Boolean)));
 }
 
 async function bootstrapFor(uid) {
@@ -69,15 +68,16 @@ async function bootstrapFor(uid) {
     return;
   }
 
-  // reset supaya tidak “warisan”
-  store.set({ stats: defaultStats(), badges: [], uid });
+  // ✅ FIX: jangan reset stats/badges ke default sebelum load selesai
+  // cukup set uid agar tidak "warisan user" secara identitas, tapi data tetap tampil
+  store.set({ uid });
 
   try {
     const [s, b] = await Promise.all([loadStats(uid), loadBadges(uid)]);
     const stats = s || defaultStats();
     const badgeIds = safeArray(b);
 
-    // ✅ permanen: gabungkan badge yang sudah tersimpan + badge yang valid byRules
+    // ✅ gabungkan badge tersimpan + badge yang valid byRules
     const byRules = computeBadgesByRules(stats);
     const finalIds = unionIds(badgeIds, byRules);
 
@@ -87,8 +87,10 @@ async function bootstrapFor(uid) {
     if (!sameSet(badgeIds, finalIds)) {
       Promise.resolve(saveBadges(uid, finalIds)).catch(() => {});
     }
-  } catch {
-    store.set({ stats: defaultStats(), badges: [], uid });
+  } catch (e) {
+    // ✅ FIX: jangan memaksa default pada error (ini bikin "reset")
+    console.warn("bootstrapFor failed:", e);
+    // keep state yang lama agar UI tidak tiba-tiba 0
   }
 }
 
@@ -106,6 +108,9 @@ export function useProgress() {
 
   const updateStats = async (next) => {
     store.set({ stats: next });
+
+    // ✅ FIX: kalau uid belum siap, jangan save ke Firestore (hindari nyangkut ke "guest")
+    if (!uid) return next;
 
     const saved = await saveStats(uid, next);
     store.set({ stats: saved });
@@ -132,6 +137,9 @@ export function useProgress() {
     const finalIds = unionIds(now, ids);
 
     store.set({ badges: finalIds });
+
+    // ✅ FIX: kalau uid belum siap, jangan save ke Firestore
+    if (!uid) return finalIds;
 
     const saved = await saveBadges(uid, finalIds);
     store.set({ badges: safeArray(saved) });

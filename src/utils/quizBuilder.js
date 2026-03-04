@@ -1,6 +1,7 @@
 // src/utils/quizBuilder.js
 import { getCategoryById, CATEGORIES } from "./routes.js";
 import { normalizeItem, getCategoryValue } from "./dataAdapter.js";
+import { resolveImageForFieldKey } from "./assetImages.js";
 
 // ======================
 // Helpers
@@ -29,7 +30,7 @@ function uniqueBy(arr, keyFn) {
   return out;
 }
 function safeIsland(item) {
-  return item?.pulau || item?.island || item?.islandName || item?.Pulau || null;
+  return item?.pulau || item?.island || item?.islandName || item?.Pulau || item?.island || null;
 }
 function safeProvince(item) {
   return item?.province || item?.provinsi || item?.Provinsi || null;
@@ -97,15 +98,19 @@ function makePlaceholderDataUri(labelTop, labelBottom) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// ======================
-// Image resolver (Vite: import.meta.glob)
-// Struktur final:
-// src/assets/images/<kategori>/<asli|chibi>/<nama-provinsi>.png (opsional)
-// + fallback public/images/<kategori>/<asli|chibi>/<nama-provinsi>.png (punya kamu)
-// ======================
+// ✅ cache placeholder biar tidak encode SVG berkali-kali
+const _phCache = new Map();
+function getPlaceholder(labelTop, labelBottom) {
+  const k = `${labelTop || ""}||${labelBottom || ""}`;
+  const hit = _phCache.get(k);
+  if (hit) return hit;
+  const uri = makePlaceholderDataUri(labelTop, labelBottom);
+  _phCache.set(k, uri);
+  return uri;
+}
 
 // set true kalau mau debug di console
-const DEBUG_IMAGES = true;
+const DEBUG_IMAGES = false;
 
 let _imageIndexBuilt = false;
 let _imagesByKey = new Map(); // key -> url
@@ -120,7 +125,6 @@ const FIELDKEY_TO_FOLDER = {
   traditionalFood: "makanan-khas",
 };
 
-// ✅ alias fieldKey lama (Indonesia) -> fieldKey canonical
 const FIELDKEY_ALIAS = {
   hewanIkonik: "iconicAnimal",
   rumahAdat: "traditionalHouse",
@@ -146,70 +150,14 @@ function canonFieldKey(fk) {
 }
 
 function buildImageIndexOnce() {
-  if (_imageIndexBuilt) return;
+  // ✅ DISABLE indexing dobel: assetImages.js sudah punya glob index sendiri
+  // (mengurangi beban dev/build & startup)
   _imageIndexBuilt = true;
-
-  const glob =
-    import.meta && typeof import.meta.glob === "function" ? import.meta.glob : null;
-  if (!glob) {
-    if (DEBUG_IMAGES)
-      console.warn("[quizBuilder] import.meta.glob not available (kamu bukan Vite?)");
-    return;
-  }
-
-  // ✅ gabung 2 pattern biar aman (relative & absolute)
-  const modsRel = glob("../assets/images/**/*.{png,jpg,jpeg,webp}", { eager: true });
-  const modsAbs = glob("/src/assets/images/**/*.{png,jpg,jpeg,webp}", { eager: true });
-  const mods = { ...modsRel, ...modsAbs };
-
-  // ✅ regex: .../images/<folder>/<variant>/<file>.<ext>
-  const re = /(?:^|\/)images\/([^/]+)\/([^/]+)\/([^/]+)\.(png|jpe?g|webp)$/i;
-
-  let matched = 0;
-
-  for (const path in mods) {
-    const mod = mods[path];
-    const url = typeof mod === "string" ? mod : mod?.default || null;
-    if (!url || typeof url !== "string") continue;
-
-    const p = String(path).replaceAll("\\", "/");
-    const m = p.match(re);
-    if (!m) continue;
-
-    const folderRaw = m[1];
-    const variantRaw = m[2];
-    const baseRaw = m[3];
-
-    const folderNorm = slugify(folderRaw);
-    const variantNorm = slugify(variantRaw);
-    const baseNorm = slugify(baseRaw);
-
-    if (!folderNorm || !baseNorm) continue;
-    if (variantNorm !== "asli" && variantNorm !== "chibi") continue;
-
-    matched += 1;
-
-    _imagesByKey.set(`${folderNorm}:${variantNorm}:${baseNorm}`, url);
-    _imagesByKey.set(`${folderNorm}_${variantNorm}_${baseNorm}`, url);
-
-    if (!_imagesByKey.has(`${folderNorm}:${baseNorm}`))
-      _imagesByKey.set(`${folderNorm}:${baseNorm}`, url);
-    if (!_imagesByKey.has(`${folderNorm}_${baseNorm}`))
-      _imagesByKey.set(`${folderNorm}_${baseNorm}`, url);
-
-    if (!_imagesByKey.has(baseNorm)) _imagesByKey.set(baseNorm, url);
-  }
-
-  if (DEBUG_IMAGES) {
-    console.log("[quizBuilder] glob total keys:", Object.keys(mods).length);
-    console.log("[quizBuilder] matched images:", matched);
-    console.log("[quizBuilder] image index size:", _imagesByKey.size);
-  }
+  return;
 }
 
 function resolveRealImage({ fieldKey, id, province, variant, item }) {
-  buildImageIndexOnce();
-
+  // tetap hormati direct URL di data kalau ada
   const fkRaw = String(fieldKey || "");
   const fk = canonFieldKey(fkRaw);
 
@@ -220,68 +168,30 @@ function resolveRealImage({ fieldKey, id, province, variant, item }) {
     if (!direct.startsWith("data:image/")) return direct;
   }
 
-  const folder = FIELDKEY_TO_FOLDER[fk] || FIELDKEY_TO_FOLDER[fkRaw] || fk;
-  const folderSlug = slugify(folder);
-
-  const idSlug = slugify(id || "");
-  const provSlug = slugify(province || "");
-
-  // ✅ PRIORITAS province dulu (karena file public kamu pakai nama provinsi penuh)
-  const primaryKeys = [provSlug, idSlug].filter(Boolean);
-
-  const findWithVariant = (v) => {
-    const vv = slugify(v || "");
-    for (const k of primaryKeys) {
-      const hit =
-        _imagesByKey.get(`${folderSlug}:${vv}:${k}`) ||
-        _imagesByKey.get(`${folderSlug}_${vv}_${k}`);
-      if (hit) return hit;
-    }
-    return null;
-  };
-
-  if (variant === "chibi") {
-    const ch = findWithVariant("chibi");
-    if (ch) return ch;
-    const as = findWithVariant("asli");
-    if (as) return as;
-  }
-
-  if (variant === "asli") {
-    const as = findWithVariant("asli");
-    if (as) return as;
-  }
-
-  const asAny = findWithVariant("asli");
-  if (asAny) return asAny;
-  const chAny = findWithVariant("chibi");
-  if (chAny) return chAny;
-
-  for (const k of primaryKeys) {
-    const hit =
-      _imagesByKey.get(`${folderSlug}:${k}`) ||
-      _imagesByKey.get(`${folderSlug}_${k}`) ||
-      _imagesByKey.get(k);
-    if (hit) return hit;
-  }
-
-  if (DEBUG_IMAGES) {
-    console.warn("[quizBuilder] real image not found", {
-      fieldKey,
-      folderSlug,
-      idSlug,
-      provSlug,
+  // ✅ pakai resolver utama (assetImages.js)
+  // Tapi: kalau hasilnya /images/... itu public fallback,
+  // kita JANGAN anggap itu "real", supaya resolveMedia(pub) tetap dipakai.
+  try {
+    const u = resolveImageForFieldKey({
+      fieldKey: fk,
       variant,
+      id,
+      province,
     });
-  }
 
-  return null;
+    if (typeof u === "string" && u.startsWith("/images/")) {
+      // ini fallback public → biarkan pub resolver yang menang
+      return null;
+    }
+
+    return u || null;
+  } catch {
+    return null;
+  }
 }
 
-// ⚠️ fungsi lama masih dipertahankan (dipakai juga oleh UI public/images)
-// ✅ FIX: prioritas province dulu, baru id (biar cocok dengan public/images kamu)
 function resolveMedia({ fieldKey, id, province, variant }) {
-  const fk = String(fieldKey || "");
+  const fk = canonFieldKey(fieldKey);
   const folder = FIELDKEY_TO_FOLDER[fk] || fk;
 
   const v = String(variant || "").toLowerCase() === "chibi" ? "chibi" : "asli";
@@ -289,15 +199,11 @@ function resolveMedia({ fieldKey, id, province, variant }) {
   const keyProvince = fileKey(province);
   const keyId = fileKey(id);
 
-  // ✅ src utama: province (kalau ada), baru id
   const keyMain = keyProvince || keyId;
   if (!keyMain) return { src: "", fallbackSrc: "" };
 
   const src = `/images/${folder}/${v}/${keyMain}.png`;
 
-  // ✅ fallback:
-  // - kalau chibi: coba asli (key sama)
-  // - kalau bukan chibi & punya 2 key: coba key satunya
   let fallbackSrc = "";
   if (v === "chibi") {
     fallbackSrc = `/images/${folder}/asli/${keyMain}.png`;
@@ -306,25 +212,28 @@ function resolveMedia({ fieldKey, id, province, variant }) {
     fallbackSrc = `/images/${folder}/${v}/${other}.png`;
   }
 
-  if (DEBUG_IMAGES) {
-    console.log("[media]", {
-      fk,
-      folder,
-      province,
-      id,
-      keyProvince,
-      keyId,
-      variant: v,
-      src,
-      fallbackSrc,
-    });
-  }
-
   return { src, fallbackSrc };
 }
 
-// ✅ resolver: pakai real image index bila ada,
-// kalau tidak ada -> pakai public path -> fallback placeholder
+function makeAssetResolver({ category, idKey, province, variant }) {
+  const fieldKey = canonFieldKey(category?.fieldKey || "");
+  return async () => {
+    try {
+      // resolveImageForFieldKey biasanya sync; Promise.resolve biar aman
+      return await Promise.resolve(
+        resolveImageForFieldKey({
+          fieldKey,
+          variant,
+          id: idKey,
+          province,
+        })
+      );
+    } catch {
+      return null;
+    }
+  };
+}
+
 function resolveBestMedia({ item, category, idKey, province, variant }) {
   const fieldKey = category?.fieldKey || "";
   const fk = canonFieldKey(fieldKey);
@@ -344,25 +253,17 @@ function resolveBestMedia({ item, category, idKey, province, variant }) {
     variant,
   });
 
-  const placeholder = makePlaceholderDataUri(category?.title || "Belajar Nusantara", province);
+  const placeholder = getPlaceholder(category?.title || "Belajar Nusantara", province);
 
-  // src: prefer real, else public
-  const src = real || pub?.src || placeholder;
-
-  // fallback: chibi -> real(asli) / pub(asli) -> placeholder
-  let fallbackSrc = placeholder;
-  if (String(variant || "").toLowerCase() === "chibi") {
-    const realAsli = resolveRealImage({
-      fieldKey: fk,
-      id: idKey,
-      province,
-      variant: "asli",
-      item,
-    });
-    fallbackSrc = realAsli || pub?.fallbackSrc || placeholder;
-  }
-
-  return { src, fallbackSrc };
+  return {
+    src: real || pub?.src || placeholder,
+    fallbackSrc:
+      (String(variant || "").toLowerCase() === "chibi"
+        ? (resolveRealImage({ fieldKey: fk, id: idKey, province, variant: "asli", item }) ||
+            pub?.fallbackSrc)
+        : pub?.fallbackSrc) || placeholder,
+    resolver: makeAssetResolver({ category, idKey, province, variant }),
+  };
 }
 
 // ✅ helper buat Learn.jsx (tetap export)
@@ -398,24 +299,12 @@ const QUESTION_VARIATIONS = {
 // ======================
 // Question builder
 // ======================
-/**
- * opts:
- * - categoryId: string (optional)
- * - allowedIslands: string[] (optional)
- * - modeId: "easy" | "normal" | "hard" (optional)
- * - inverseRate: number (0..1) default 0.45
- * - imageRate: number (0..1) default 0.55
- * - optionsCount: number default 3
- * - imageVariant: "asli" | "chibi" | null
- */
 export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
   const { categoryId } = opts || {};
   const optionsCount = Number(opts?.optionsCount || 3);
 
-  const inverseRate =
-    typeof opts?.inverseRate === "number" ? opts.inverseRate : 0.45;
-  const imageRate =
-    typeof opts?.imageRate === "number" ? opts.imageRate : 0.55;
+  const inverseRate = typeof opts?.inverseRate === "number" ? opts.inverseRate : 0.45;
+  const imageRate = typeof opts?.imageRate === "number" ? opts.imageRate : 0.55;
 
   const imageVariant = opts?.imageVariant || "asli";
 
@@ -436,7 +325,6 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
       raw?.Provinsi ||
       "";
 
-    // ⚠️ boleh tetap simpan raw.id, tapi resolver gambar sekarang prioritas province
     n.__id = raw?.id || n?.id || slugify(prov);
     n.__province = prov;
     n.id = raw?.id || n.id;
@@ -456,7 +344,6 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
     ? [getCategoryById(categoryId)].filter(Boolean)
     : [...CATEGORIES];
 
-  // pool: kombinasi provinsi + kategori + value
   const pool = [];
   for (const item of filteredByIsland) {
     const province = String(safeProvince(item) || item.__province || "").trim();
@@ -481,9 +368,7 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
     (p) => `${p.province}__${p.cat?.fieldKey || ""}__${p.value || ""}`
   );
 
-  const allProvinces = uniqueBy(uniqPool.map((p) => p.province), (x) => x).map(
-    String
-  );
+  const allProvinces = uniqueBy(uniqPool.map((p) => p.province), (x) => x).map(String);
 
   const valuesByField = new Map();
   const entriesByField = new Map();
@@ -612,10 +497,10 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
       answer = province;
       options = buildOptionsProvince(answer);
       media = {
-        src: bestMedia?.src || makePlaceholderDataUri(cat?.title, province),
-        fallbackSrc:
-          bestMedia?.fallbackSrc || makePlaceholderDataUri(cat?.title, province),
+        src: bestMedia?.src || getPlaceholder(cat?.title, province),
+        fallbackSrc: bestMedia?.fallbackSrc || getPlaceholder(cat?.title, province),
         alt: `${cat?.title || "Gambar"} ${province}`,
+        resolver: bestMedia?.resolver,
       };
       qType = "img_to_province";
     }
@@ -673,9 +558,8 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
         optionMediaMap = {};
         for (const opt of all) {
           optionMediaMap[opt.label] = {
-            src: opt.media?.src || makePlaceholderDataUri(cat?.title, opt.province),
-            fallbackSrc:
-              opt.media?.fallbackSrc || makePlaceholderDataUri(cat?.title, opt.province),
+            src: opt.media?.src || getPlaceholder(cat?.title, opt.province),
+            fallbackSrc: opt.media?.fallbackSrc || getPlaceholder(cat?.title, opt.province),
             alt: `${cat?.title || "Gambar"} ${opt.province}`,
           };
         }
@@ -684,14 +568,38 @@ export function buildMixedQuizQuestions(rawData, count = 10, opts = {}) {
       }
     }
 
+    // ✅ NEW (CLT support): one-sentence reason derived from existing dataset fields
+    const islandName = String(safeIsland(p.item) || "").trim();
+    const capitalName = String(p.item?.capital || "").trim();
+
+    const reason = (() => {
+      // 1 kalimat “aman”: tidak ngarang fakta di luar dataset
+      if (qType === "value_to_province") {
+        return islandName
+          ? `Provinsi ini berada di Pulau ${islandName} dan terkait kategori "${cat?.title || "Kategori"}".`
+          : `Provinsi ini terkait kategori "${cat?.title || "Kategori"}" sesuai data pembelajaran.`;
+      }
+
+      if (qType === "province_to_value" || qType === "img_to_province" || qType === "province_to_img") {
+        if (capitalName) return `Catatan: Ibu kota provinsi ini adalah ${capitalName}.`;
+        return islandName ? `Catatan: Provinsi ini berada di Pulau ${islandName}.` : `Catatan: Cocokkan provinsi dan kategorinya.`;
+      }
+
+      return islandName ? `Catatan: Provinsi ini berada di Pulau ${islandName}.` : `Catatan: Gunakan petunjuk kategori untuk memilih.`;
+    })();
+
     return {
-      id: `${slugify(province)}-${cat?.id}-${index}-${Math.random()
-        .toString(16)
-        .slice(2)}`,
+      id: `${slugify(province)}-${cat?.id}-${index}-${Math.random().toString(16).slice(2)}`,
       prompt,
       options,
       answer,
+
+      // existing label (keep)
       explanation: `${province} • ${cat?.title || "Kategori"}: ${value}`,
+
+      // ✅ NEW: short reason for elaborated feedback (UI medium)
+      reason,
+
       categoryId: cat?.id || "",
       categoryTitle: cat?.title || "",
       fieldKey,

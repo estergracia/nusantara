@@ -13,6 +13,7 @@ import {
   signOut
 } from "firebase/auth";
 import { auth } from "../firebase/firebase.js";
+import { supabase } from "../lib/supabase.js";
 import Telemetry from "../utils/telemetry.js";
 
 const AuthCtx = createContext(null);
@@ -28,30 +29,21 @@ export function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user || null);
       setAuthLoading(false); // 🔥 WAJIB
+
+      // 🔐 SYNC FIREBASE → SUPABASE (INI KUNCINYA)
+      if (user) {
+        const token = await user.getIdToken(true);
+        await supabase.auth.signInWithIdToken({
+          provider: "firebase",
+          token
+        });
+      } else {
+        await supabase.auth.signOut();
+      }
     });
 
     return () => unsub();
   }, []);
-
-  // =========================
-  // TELEMETRY SESSION
-  // =========================
-  useEffect(() => {
-    if (!currentUser) return;
-
-    Telemetry.startSession({
-      uid: currentUser.uid,
-      mode: "complex",
-      meta: {
-        appVersion: "1.0.0",
-        uiLevel: "complex"
-      }
-    });
-
-    return () => {
-      Telemetry.endSession({ reason: "logout" });
-    };
-  }, [currentUser]);
 
   // =========================
   // AUTH ACTIONS

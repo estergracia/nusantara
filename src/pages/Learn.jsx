@@ -1,5 +1,4 @@
-// src/pages/Learn.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import useUiLevelFirestore from "../hooks/useUiLevelFirestore.js";
@@ -7,11 +6,10 @@ import { getCategoryById } from "../utils/routes.js";
 import nusantaraData from "../data/nusantaraData.js";
 import { getCategoryValue, normalizeItem } from "../utils/dataAdapter.js";
 
-// ✅ resolver dari quizBuilder (glob src/assets/images)
 import { resolveCategoryMediaForUi } from "../utils/quizBuilder.js";
-
-// ✅ SFX (hanya kompleks)
-import { playSfx } from "../utils/sfx.js";
+import { playSfx, playBgm, setAudioMode, stopComplexBgm } from "../utils/sfx.js";
+import Telemetry from "../utils/telemetry.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -23,9 +21,6 @@ function hashStr(s) {
   return h;
 }
 
-/**
- * Fun fact "kategori-aware" (tanpa input manual per item)
- */
 function buildFunFact({ item, category, value }) {
   if (!item || !category || !value) return "";
 
@@ -34,13 +29,10 @@ function buildFunFact({ item, category, value }) {
   const getOther = (fieldKey) => {
     const otherVal = item?.[fieldKey] || "";
     if (!otherVal) return "";
-    if (String(otherVal).trim().toLowerCase() === String(value).trim().toLowerCase())
-      return "";
+    if (String(otherVal).trim().toLowerCase() === String(value).trim().toLowerCase()) return "";
     return String(otherVal);
   };
 
-  // dipakai hanya untuk variasi kata, bukan “fact” tambahan
-  const iconicAnimal = getOther("iconicAnimal");
   const rumah = getOther("traditionalHouse");
   const pakaian = getOther("traditionalClothes");
   const tarian = getOther("traditionalDance");
@@ -52,62 +44,46 @@ function buildFunFact({ item, category, value }) {
 
   const bankByCategory = {
     iconicAnimal: [
-      `Satu kata kunci buat ${prov}: “${value}”. Kenapa bisa jadi ikon? (Nanti kamu bakal nemu polanya 😉)`,
       `Coba tebak: kalau ${prov} punya “maskot”, jawabannya “${value}”. Simpan dulu di kepala!`,
       `Bayangkan kamu bikin poster ${prov}. Hewan yang paling pas ditaruh di tengah? “${value}”.`,
       `Mini-challenge: sebut cepat 2x → ${prov}, ${value}. Ulang 3 detik, hafal langsung.`,
-      `Kalau ada soal hewan ikonik, kamu cari pola: provinsi → ikon → “${value}”.`,
     ],
     traditionalHouse: [
       `Rumah adat ${prov} bernama “${value}”. Coba bayangkan pintunya… unik nggak ya?`,
       `“${value}” = rumah adat ${prov}. Anggap ini “password” budaya untuk provinsi itu.`,
-      `Kuis kilat: rumah adat ${prov}? … “${value}”. Jawab tanpa mikir dulu 😄`,
-      rumah ? `Hint asosiasi: rumah adat lain yang pernah kamu lihat? Bandingkan dengan “${value}”.` : "",
-      `Kalau kamu lihat kata “${value}”, auto-ingat: itu rumah adat ${prov}.`,
+      rumah ? `Hint asosiasi: bandingkan dengan rumah adat lain, tapi kuncinya tetap “${value}”.` : "",
     ],
     traditionalClothes: [
-      `Pakaian adat ${prov} itu “${value}”. Kamu kebayang dipakai di acara apa? (cukup bayangin aja 😉)`,
+      `Pakaian adat ${prov} itu “${value}”. Kebayang dipakai di acara apa?`,
       `“${value}” = pakaian adat ${prov}. Tips: bayangkan warna/aksennya versi kamu sendiri.`,
-      `Mode penasaran: kalau kamu cosplay budaya ${prov}, outfit-nya namanya “${value}”.`,
       pakaian ? `Kalau ada pilihan mirip-mirip, cari yang “paling khas”: “${value}”.` : "",
-      `Hafalan cepat: ${prov} → pakaian → “${value}”. Simpel, tapi nempel.`,
     ],
     traditionalDance: [
       `Tarian ${prov}: “${value}”. Coba dengar namanya—ritmenya terasa nggak?`,
-      `“${value}” adalah tarian daerah ${prov}. Bayangkan gerakan pembukaannya versi kamu.`,
-      `Tantangan 5 detik: ${prov} → tari → “${value}”. Bisa jawab cepat?`,
+      `“${value}” adalah tarian daerah ${prov}. Bayangkan gerakan pembukaannya.`,
       tarian ? `Kunci memori: “tari kebanggaan ${prov} = ${value}”.` : "",
-      `Kalau kamu denger “${value}”, langsung kunci: itu tarian dari ${prov}.`,
     ],
     traditionalInstrument: [
-      `Alat musik ${prov} namanya “${value}”. Penasaran bunyinya kayak apa? (bayangin dulu 😄)`,
+      `Alat musik ${prov} namanya “${value}”. Penasaran bunyinya kayak apa?`,
       `“${value}” = alat musik tradisional ${prov}. Simpan sebagai “soundtrack” daerah itu.`,
-      `Mini-quiz: musik khas ${prov}? … “${value}”. Mantap kalau bisa jawab instan.`,
       alat ? `Bayangkan bunyi “${value}” jadi intro sebelum kamu jawab soal.` : "",
-      `Kalau ditanya alat musik daerah, ingat pola: provinsi → musik → “${value}”.`,
     ],
     traditionalWeapon: [
-      `Senjata tradisional ${prov} adalah “${value}”. Catatan: ini konteksnya warisan budaya ya.`,
-      `“${value}” = senjata tradisional dari ${prov}. Penasaran bentuknya? Simpan namanya dulu.`,
-      `Kunci hafalan: ${prov} → senjata → “${value}”. Jangan ketukar sama provinsi lain.`,
-      senjata ? `Anggap ini “item langka” budaya: ${prov} → “${value}”.` : "",
-      `Kalau kamu lihat “${value}”, ingat: itu identitas budaya ${prov}.`,
+      `Senjata tradisional ${prov} adalah “${value}”. (konteks: warisan budaya ya)`,
+      `“${value}” = senjata tradisional dari ${prov}. Simpan namanya dulu.`,
+      senjata ? `Anggap ini “item langka”: ${prov} → “${value}”.` : "",
     ],
     traditionalFood: [
-      `Makanan khas ${prov}: “${value}”. Kamu kebayang rasanya? (asam? manis? pedas? terserah bayanganmu 😄)`,
+      `Makanan khas ${prov}: “${value}”. Kamu kebayang rasanya?`,
       `“${value}” = kuliner khas ${prov}. Simpan sebagai “menu wajib” kalau suatu hari ke sana.`,
-      `Tebak cepat: kalau orang nyebut ${prov}, makanan yang sering dikaitkan: “${value}”.`,
       makanan ? `Bayangkan papan menu: ${prov} — item paling atas “${value}”.` : "",
-      `Kalau soal makanan khas muncul, kuncinya: provinsi → kuliner → “${value}”.`,
     ],
   };
 
   const templates =
-    bankByCategory[fk] ||
-    [
-      `“${value}” adalah ${category.title.toLowerCase()} dari provinsi ${prov}. Simpan dulu—nanti kebuka polanya 😉`,
+    bankByCategory[fk] || [
+      `“${value}” adalah ${category.title.toLowerCase()} dari provinsi ${prov}.`,
       `Tips cepat: ucapkan “${prov} → ${value}” sekali, lalu jawab tanpa ragu.`,
-      `Kalau kamu bingung, kunci saja: ${category.title.toLowerCase()} ${prov} = “${value}”.`,
       `Mini-challenge: kamu bisa jawab ini dalam 2 detik? ${prov}… ${value}.`,
     ];
 
@@ -123,22 +99,35 @@ export default function Learn() {
   const location = useLocation();
   const { categoryId } = useParams();
   const { is } = useUiLevelFirestore();
+  const { currentUser } = useAuth();
 
+  const uiMode = is.simple ? "simple" : is.medium ? "medium" : "complex";
   const category = getCategoryById(categoryId);
 
-  // ✅ medium: detail card tidak muncul sebelum klik
   const [hasPicked, setHasPicked] = useState(false);
-
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [popupOpen, setPopupOpen] = useState(false);
 
-  // ✅ anchor untuk scroll ke detail (medium)
   const detailAnchorRef = useRef(null);
+
+  // ✅ Sinkronkan mode audio dengan UI mode (tanpa ubah bank soal/scoring)
+  useEffect(() => {
+    setAudioMode(uiMode);
+  }, [uiMode]);
+
+  useEffect(() => {
+    Telemetry.trackNavigation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
 
   useEffect(() => {
     setHasPicked(false);
     setSelectedIndex(0);
     setPopupOpen(false);
+
+    // ✅ Anti-bocor: kalau keluar dari complex, pastikan BGM complex mati.
+    // (Kalau tetap di complex: jangan dimatikan)
+    if (!is.complex) stopComplexBgm();
   }, [categoryId, is.simple, is.medium, is.complex]);
 
   const items = useMemo(() => {
@@ -172,24 +161,40 @@ export default function Learn() {
     });
   }, [selected, category]);
 
+  // ✅ Revisi #1: funFact tidak boleh muncul di mode complex (no elaborated feedback)
   const funFact = useMemo(() => {
     if (!selected || !category) return "";
     if (is.simple) return "";
+    if (is.complex) return "";
     return buildFunFact({ item: selected, category, value: selectedValue });
-  }, [selected, category, selectedValue, is.simple]);
+  }, [selected, category, selectedValue, is.simple, is.complex]);
 
-  // ✅ close popup via ESC
+  // ✅ Complex: BGM nyala terus selama mode complex (tidak tergantung popup)
+  useEffect(() => {
+    if (!is.complex) return;
+    playBgm();
+  }, [is.complex]);
+
+  // Helper close popup (konsisten Escape / backdrop / button)
+  const closePopup = useCallback(() => {
+    setPopupOpen(false);
+
+    // ✅ BGM TIDAK DIMATIKAN
+    if (is.complex) {
+      playSfx("tap");
+      window.setTimeout(() => playSfx("tap"), 60);
+    }
+  }, [is.complex]);
+
+  // Escape close
   useEffect(() => {
     if (!popupOpen) return;
     const onKey = (e) => {
-      if (e.key === "Escape") {
-        setPopupOpen(false);
-        if (is.complex) playSfx("tap");
-      }
+      if (e.key === "Escape") closePopup();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [popupOpen, is.complex]);
+  }, [popupOpen, closePopup]);
 
   if (!category) {
     return (
@@ -198,7 +203,11 @@ export default function Learn() {
         <button
           type="button"
           className="ui-btn ui-btn--primary mt-4"
-          onClick={() => navigate({ pathname: "/categories", search: location.search })}
+          onClick={() => {
+            Telemetry.trackClick();
+            Telemetry.trackNavigation();
+            navigate({ pathname: "/categories", search: location.search });
+          }}
         >
           Kembali ke Categories
         </button>
@@ -207,7 +216,6 @@ export default function Learn() {
   }
 
   const scrollToDetail = () => {
-    // scroll-margin-top ada di CSS (bn-detailAnchor)
     requestAnimationFrame(() => {
       detailAnchorRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -217,6 +225,7 @@ export default function Learn() {
   };
 
   const onPickItem = (idx) => {
+    Telemetry.trackClick();
     setSelectedIndex(idx);
 
     if (is.medium) {
@@ -226,75 +235,60 @@ export default function Learn() {
     }
 
     if (is.complex) {
+      // ✅ Revisi #5: audio complex lebih ramai
       playSfx("tap");
-      playSfx("unlock");
+      window.setTimeout(() => playSfx("tap"), 60);
+
+      // ✅ BGM complex tidak perlu start/stop per popup,
+      // tapi aman kalau dipanggil (sfx.js sudah anti-dobel)
+      playBgm();
+
       setPopupOpen(true);
     }
   };
 
-  // (opsional tapi bikin konsisten) kalau udah membuka detail,
-  // setiap ganti item di medium akan tetap fokus ke detail
-  useEffect(() => {
-    if (!is.medium) return;
-    if (!hasPicked) return;
-    scrollToDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIndex]);
+  // Medium: grid dihilangkan -> detail selalu tampil (single viewer)
+  const showMediumViewer = is.medium && selected;
+  // Simple & Complex: grid tetap seperti lama
+  const showGrid = !is.medium;
 
   const popupPrev = () => {
     if (selectedIndex === 0) return;
+    Telemetry.trackClick();
     setSelectedIndex((s) => s - 1);
+
     playSfx("tap");
-  };
-  const popupNext = () => {
-    if (selectedIndex >= items.length - 1) return;
-    setSelectedIndex((s) => s + 1);
-    playSfx("tap");
+    if (is.complex) window.setTimeout(() => playSfx("tap"), 40);
   };
 
-  const showTopDetail = is.medium && hasPicked && selected;
+  const popupNext = () => {
+    if (selectedIndex >= items.length - 1) return;
+    Telemetry.trackClick();
+    setSelectedIndex((s) => s + 1);
+
+    playSfx("tap");
+    if (is.complex) window.setTimeout(() => playSfx("tap"), 40);
+  };
+
   const showPopup = is.complex && popupOpen && selected;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="ui-page ui-page--learn space-y-4">
       <section className="ui-card ui-card--pattern ui-card--pad">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="ui-title text-2xl font-extrabold">{category.title}</div>
-            <div className="mt-1 text-sm ui-muted">
-              {is.medium ? "klik kartu untuk melihat detail." : "klik kartu untuk melihat detail"}
-            </div>
           </div>
         </div>
 
-        {/* ✅ anchor target scroll (medium) */}
         <div ref={detailAnchorRef} className="bn-detailAnchor" />
 
-        {/* ✅ MEDIUM: detail card muncul setelah klik + ada tombol X */}
-        {showTopDetail ? (
-          <div className="mt-4 bn-detailCompact">
-            <button
-              type="button"
-              className="bn-detailClose"
-              aria-label="Tutup detail"
-              onClick={() => setHasPicked(false)}
-              title="Tutup"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M18 6L6 18M6 6l12 12"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-
-            <div className="bn-detailRow">
+        {showMediumViewer ? (
+          <div className="mt-4 bn-detailCompact bn-detailCompact--learnOne">
+            <div className="bn-detailRow bn-detailRow--learnOne">
               <div className="bn-detailImg">
                 {detailMedia?.src ? (
-                  <div className="bn-square bn-square--cover">
+                  <div className="bn-square bn-square--cover bn-detailImgBox">
                     <img
                       src={detailMedia.src}
                       alt={selectedValue}
@@ -304,97 +298,137 @@ export default function Learn() {
                 ) : null}
               </div>
 
-              <div className="bn-detailBody">
-                <div className="ui-title text-lg font-extrabold">{selectedValue || "-"}</div>
-                <div className="ui-muted text-sm bn-detailMeta">
-                  {selected?.province} {selected?.capital ? `• Ibu kota: ${selected.capital}` : ""}
+              <div className="bn-detailBody bn-detailBody--learnOne">
+                <div className="bn-typoTitle">
+                  <span className="bn-typoTitle__accent">{selectedValue || "-"}</span>
+                </div>
+
+                <div className="bn-typoMeta">
+                  <span className="bn-typoMeta__label">Provinsi:</span>{" "}
+                  <span className="bn-typoMeta__value">{selected?.province || "-"}</span>
+                  {selected?.capital ? (
+                    <>
+                      <span className="bn-typoMeta__dot">•</span>
+                      <span className="bn-typoMeta__label">Ibu kota:</span>{" "}
+                      <span className="bn-typoMeta__value">{selected.capital}</span>
+                    </>
+                  ) : null}
                 </div>
 
                 {funFact ? (
-                  <div className="bn-funFact ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-                    <div className="text-sm ui-muted">{funFact}</div>
+                  <div className="bn-funFactCard ui-card ui-card--pad">
+                    <div className="bn-funFactText ui-muted">{funFact}</div>
                   </div>
                 ) : null}
+
+                <div className="bn-detailFooter bn-detailFooter--learnOne">
+                  <button
+                    type="button"
+                    className="ui-btn"
+                    disabled={selectedIndex === 0}
+                    onClick={() => {
+                      if (selectedIndex === 0) return;
+                      Telemetry.trackClick();
+                      setSelectedIndex((s) => s - 1);
+                      scrollToDetail();
+                    }}
+                  >
+                    Prev
+                  </button>
+
+                  <div className="bn-detailCounter ui-muted">
+                    {selectedIndex + 1}/{items.length}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn--primary"
+                    disabled={selectedIndex >= items.length - 1}
+                    onClick={() => {
+                      if (selectedIndex >= items.length - 1) return;
+                      Telemetry.trackClick();
+                      setSelectedIndex((s) => s + 1);
+                      scrollToDetail();
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         ) : null}
       </section>
 
-      {/* Grid cards */}
-      <section
-        className={[
-          "grid gap-3",
-          is.simple ? "sm:grid-cols-3 lg:grid-cols-3" : "sm:grid-cols-3 lg:grid-cols-4",
-        ].join(" ")}
-      >
-        {items.map((it, idx) => {
-          const v = getCategoryValue(it, category);
-          const media = gridMediaByItem(it);
+      {showGrid ? (
+        <section
+          className={[
+            "grid gap-3",
+            is.simple ? "sm:grid-cols-3 lg:grid-cols-3" : "sm:grid-cols-3 lg:grid-cols-4",
+          ].join(" ")}
+        >
+          {items.map((it, idx) => {
+            const v = getCategoryValue(it, category);
+            const media = gridMediaByItem(it);
 
-          return (
-            <button
-              key={`${it.province}-${idx}`}
-              type="button"
-              className="ui-media-card"
-              data-active={idx === selectedIndex ? "1" : "0"}
-              onClick={() => onPickItem(idx)}
-            >
-              {/* SIMPLE: gambar asli no crop */}
-              {is.simple ? (
-                <>
-                  <div className="bn-simpleMedia">
-                    {media?.src ? (
-                      <img src={media.src} alt={v} onError={(e) => (e.currentTarget.style.display = "none")} />
-                    ) : null}
-                  </div>
-                  <div className="bn-simpleBody">
-                    <div className="bn-simpleTitle">{v}</div>
-                    <div className="bn-simpleMeta">
-                      {it.province} • {it.island || "-"}
+            return (
+              <button
+                key={`${it.province}-${idx}`}
+                type="button"
+                className="ui-media-card"
+                data-active={idx === selectedIndex ? "1" : "0"}
+                onClick={() => onPickItem(idx)}
+              >
+                {is.simple ? (
+                  <>
+                    <div className="bn-simpleMedia">
+                      {media?.src ? (
+                        <img src={media.src} alt={v} onError={(e) => (e.currentTarget.style.display = "none")} />
+                      ) : null}
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* MEDIUM/COMPLEX: chibi square */}
-                  <div className="ui-media-card__img">
-                    {media?.src ? (
-                      <div className="bn-square bn-square--contain">
-                        <img
-                          src={media.src}
-                          alt={v}
-                          onError={(e) => (e.currentTarget.style.display = "none")}
-                        />
+                    <div className="bn-simpleBody">
+                      <div className="bn-simpleTitle">{v}</div>
+                      <div className="bn-simpleMeta">
+                        {it.province} • {it.island || "-"}
                       </div>
-                    ) : (
-                      <div className="ui-media-card__ph" />
-                    )}
-                  </div>
-
-                  <div className="ui-media-card__body">
-                    <div className="ui-title text-sm font-extrabold">{v}</div>
-                    <div className="text-xs ui-muted">
-                      {it.province} • {it.island || "-"}
                     </div>
-                  </div>
-                </>
-              )}
-            </button>
-          );
-        })}
-      </section>
+                  </>
+                ) : (
+                  <>
+                    <div className="ui-media-card__img">
+                      {media?.src ? (
+                        <div className="bn-square bn-square--contain">
+                          <img src={media.src} alt={v} onError={(e) => (e.currentTarget.style.display = "none")} />
+                        </div>
+                      ) : (
+                        <div className="ui-media-card__ph" />
+                      )}
+                    </div>
 
-      {/* ✅ POPUP: hanya kompleks */}
+                    <div className="ui-media-card__body">
+                      <div className="ui-title text-sm font-extrabold">{v}</div>
+                      <div className="text-xs ui-muted">
+                        {it.province} • {it.island || "-"}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </section>
+      ) : null}
+
       {showPopup ? (
         <div
           className="bn-modal-backdrop"
+          data-open="1"
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
-              setPopupOpen(false);
-              playSfx("tap");
+              Telemetry.trackClick();
+              closePopup();
             }
           }}
         >
@@ -411,8 +445,8 @@ export default function Learn() {
                 type="button"
                 className="ui-btn bn-closeBtn"
                 onClick={() => {
-                  setPopupOpen(false);
-                  playSfx("tap");
+                  Telemetry.trackClick();
+                  closePopup();
                 }}
               >
                 Close
@@ -435,9 +469,28 @@ export default function Learn() {
                       e.currentTarget.style.display = "none";
                     }}
                   />
+                  
+                  <div className="bn-detailPanel">
+                    <div className="bn-detailRow">
+                      <span className="bn-detailKey">Provinsi:</span>
+                      <span className="bn-detailVal">{selected?.province || "-"}</span>
+                    </div>
+
+                    <div className="bn-detailRow">
+                      <span className="bn-detailKey">Ibu kota:</span>
+                      <span className="bn-detailVal">{selected?.capital || "-"}</span>
+                    </div>
+
+                    <div className="bn-detailRow">
+                      <span className="bn-detailKey">Pulau:</span>
+                      <span className="bn-detailVal">{selected?.island || "-"}</span>
+                    </div>
+                  </div>
                 </div>
+                
               ) : null}
 
+              {/* ✅ funFact otomatis kosong pada mode complex */}
               {funFact ? (
                 <div className="bn-funCard ui-card ui-card--pad">
                   <div className="text-sm ui-muted">{funFact}</div>
@@ -463,7 +516,6 @@ export default function Learn() {
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       ) : null}

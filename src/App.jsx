@@ -16,20 +16,23 @@ import AppShell from "./components/AppShell.jsx";
 import RequireAuth from "./components/RequireAuth.jsx";
 import UiModeLoader from "./components/UiModeLoader.jsx";
 
+import Telemetry from "./utils/telemetry.js";
+import { useAuth } from "./contexts/AuthContext.jsx";
 import useUiLevelFirestore from "./hooks/useUiLevelFirestore.js";
 
 import {
-  setAudioEnabled,
-  setAutoBgm,
+  setAudioMode,
   setBgmVolume,
+  setMediumBgmVolume,
   setSfxVolume,
   unlockAudio,
-  stopBgm,
 } from "./utils/sfx.js";
 
 export default function App() {
   const { is } = useUiLevelFirestore();
+  const { currentUser } = useAuth();
 
+  // ✅ set dataset ui buat theme/style
   useEffect(() => {
     const ui = is?.complex ? "complex" : is?.medium ? "medium" : "simple";
     document.body.dataset.ui = ui;
@@ -39,20 +42,22 @@ export default function App() {
     };
   }, [is?.complex, is?.medium]);
 
+  // ✅ set volume sekali
   useEffect(() => {
-    const complex = !!is?.complex;
+    setBgmVolume(0.40);        // complex bgm
+    setMediumBgmVolume(0.20);  // medium bgm
+    setSfxVolume(2.6);         // mapping ke complex + medium sfx
+  }, []);
 
-    setAudioEnabled(complex);
-    setAutoBgm(complex);
-
-    setBgmVolume(0.22);
-    setSfxVolume(1.8);
-
-    if (!complex) stopBgm();
-  }, [is?.complex]);
-
+  // ✅ GLOBAL audio mode: medium & complex hidup di semua halaman
   useEffect(() => {
-    if (!is?.complex) return;
+    const mode = is?.complex ? "complex" : is?.medium ? "medium" : "off";
+    setAudioMode(mode);
+  }, [is?.complex, is?.medium]);
+
+  // ✅ unlock gesture dipasang saat complex ATAU medium
+  useEffect(() => {
+    if (!is?.complex && !is?.medium) return;
 
     const handler = () => {
       unlockAudio();
@@ -62,7 +67,7 @@ export default function App() {
     };
 
     window.addEventListener("pointerdown", handler, { passive: true });
-    window.addEventListener("keydown", handler, { passive: true });
+    window.addEventListener("keydown", handler);
     window.addEventListener("touchstart", handler, { passive: true });
 
     return () => {
@@ -70,7 +75,18 @@ export default function App() {
       window.removeEventListener("keydown", handler);
       window.removeEventListener("touchstart", handler);
     };
-  }, [is?.complex]);
+  }, [is?.complex, is?.medium]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const uiMode = is?.complex ? "complex" : is?.medium ? "medium" : "simple";
+    Telemetry.startSession({ uid: currentUser.uid, mode: uiMode });
+  }, [currentUser?.uid, is?.complex, is?.medium]);
+
+  useEffect(() => {
+    const uiMode = is?.complex ? "complex" : is?.medium ? "medium" : "simple";
+    Telemetry.setMode(uiMode);
+  }, [is?.complex, is?.medium]);
 
   return (
     <UiTheme>
@@ -94,7 +110,6 @@ export default function App() {
         </Routes>
 
         <UiModeLoader />
-        {/* ✅ Toast sudah dirender oleh ToastProvider */}
       </>
     </UiTheme>
   );
