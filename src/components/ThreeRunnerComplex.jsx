@@ -15,6 +15,14 @@ function norm(s) {
     .replace(/\s+/g, " ");
 }
 
+function normNoSpace(s) {
+  return (s ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ""); // ✅ hapus semua spasi
+}
+
 const GUARDIAN_IMAGES = Array.from({ length: 11 }, (_, i) => `/images/guardian/npc${i + 1}.png`);
 function pickRandomGuardian() {
   return GUARDIAN_IMAGES[Math.floor(Math.random() * GUARDIAN_IMAGES.length)];
@@ -96,26 +104,98 @@ function provincePoolByIsland(island) {
   return sameIsland.length ? sameIsland : nusantaraData;
 }
 
+/* ===================== LABEL INDONESIA (REVISI: jangan iconicAnimal, dll) ===================== */
+const FIELD_LABEL_ID = {
+  capital: "Ibu Kota",
+  traditionalFood: "Makanan Khas",
+  traditionalHouse: "Rumah Adat",
+  island: "Pulau",
+  traditionalDance: "Tarian Daerah",
+  traditionalInstrument: "Alat Musik",
+  traditionalWeapon: "Senjata Daerah",
+  iconicAnimal: "Hewan Ikonik",
+  provinceImage: "Provinsi",
+};
+function labelIdForFieldKey(key) {
+  return FIELD_LABEL_ID[key] || key;
+}
+
+/* ===================== Scramble jadi suku kata ===================== */
+function syllabifyId(word) {
+  const w = (word ?? "").toString().trim().toLowerCase().replace(/[^a-z]/g, "");
+  if (!w) return [];
+
+  const vowels = new Set(["a", "i", "u", "e", "o"]);
+  const out = [];
+  let cur = "";
+
+  for (let i = 0; i < w.length; i++) {
+    const ch = w[i];
+    const next = w[i + 1] || "";
+    const next2 = w[i + 2] || "";
+    cur += ch;
+
+    const isV = vowels.has(ch);
+    if (!isV) continue;
+
+    // sampai vokal, tentukan pemisahan suku kata (heuristik sederhana Bahasa Indonesia)
+    if (!next) {
+      out.push(cur);
+      cur = "";
+      break;
+    }
+
+    const nextIsV = vowels.has(next);
+    const next2IsV = vowels.has(next2);
+
+    if (nextIsV) {
+      // V-V -> pisah
+      out.push(cur);
+      cur = "";
+      continue;
+    }
+
+    // next konsonan
+    if (next && next2 && next2IsV) {
+      // V-C-V -> pisah di vokal (C jadi awal suku berikutnya)
+      out.push(cur);
+      cur = "";
+      continue;
+    }
+
+    // V-C-(C/END) -> C ikut suku ini
+    if (next) {
+      cur += next;
+      i += 1;
+      out.push(cur);
+      cur = "";
+    }
+  }
+
+  if (cur) out.push(cur);
+  return out.filter(Boolean);
+}
+
 const FIELD_BANK = {
   easy: [
-    { key: "capital", label: "ibu kota" },
-    { key: "traditionalFood", label: "makanan khas" },
-    { key: "traditionalHouse", label: "rumah adat" },
-    { key: "island", label: "pulau" },
+    { key: "capital", label: "Ibu Kota" },
+    { key: "traditionalFood", label: "Makanan Khas" },
+    { key: "traditionalHouse", label: "Rumah Adat" },
+    { key: "island", label: "Pulau" },
   ],
   normal: [
-    { key: "traditionalDance", label: "tarian daerah" },
-    { key: "traditionalInstrument", label: "alat musik" },
-    { key: "traditionalWeapon", label: "senjata daerah" },
-    { key: "capital", label: "ibu kota" },
+    { key: "traditionalDance", label: "Tarian Daerah" },
+    { key: "traditionalInstrument", label: "Alat Musik" },
+    { key: "traditionalWeapon", label: "Senjata Daerah" },
+    { key: "capital", label: "Ibu Kota" },
   ],
   hard: [
-    { key: "traditionalDance", label: "tarian daerah" },
-    { key: "traditionalInstrument", label: "alat musik" },
-    { key: "traditionalWeapon", label: "senjata daerah" },
-    { key: "iconicAnimal", label: "hewan ikonik" },
-    { key: "traditionalHouse", label: "rumah adat" },
-    { key: "traditionalFood", label: "makanan khas" },
+    { key: "traditionalDance", label: "Tarian Daerah" },
+    { key: "traditionalInstrument", label: "Alat Musik" },
+    { key: "traditionalWeapon", label: "Senjata Daerah" },
+    { key: "iconicAnimal", label: "Hewan Ikonik" },
+    { key: "traditionalHouse", label: "Rumah Adat" },
+    { key: "traditionalFood", label: "Makanan Khas" },
   ],
 };
 
@@ -147,7 +227,7 @@ function makeMCQ(island, stageKey, usedProvIds) {
     prompt: `Apa ${field.label} dari ${prov.province}?`,
     options,
     answer,
-    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key },
+    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key, fieldLabel: field.label },
   };
 }
 
@@ -178,12 +258,13 @@ function makeTF(island, stageKey) {
     prompt: "",
     statement: `${statedValue} adalah ${field.label} ${prov.province}.`,
     answer: correctBool,
-    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key, correctValue },
+    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key, fieldLabel: field.label, correctValue },
   };
 }
 
 function makeScramble(island, stageKey) {
   const prov = pickProvinceByIslandStrict(island);
+
   const preferred = [
     "capital",
     "traditionalFood",
@@ -195,8 +276,9 @@ function makeScramble(island, stageKey) {
   ];
   const bank = FIELD_BANK[stageKey] || FIELD_BANK.easy;
 
+  // ✅ fallback label pakai Indonesia, bukan key mentah
   const candidates = preferred
-    .map((k) => bank.find((b) => b.key === k) || { key: k, label: k })
+    .map((k) => bank.find((b) => b.key === k) || { key: k, label: labelIdForFieldKey(k) })
     .filter((f) => ((prov?.[f.key] ?? "").toString().trim().length > 0));
 
   const pickFrom = candidates.length ? candidates : bank;
@@ -206,9 +288,10 @@ function makeScramble(island, stageKey) {
   if (!answer) return null;
 
   const raw = answer.replace(/\s+/g, "");
-  if (raw.length < 4) return null;
+  const sylls = syllabifyId(raw);
+  if (sylls.length < 2) return null; // minimal 2 suku kata
 
-  const tokens = shuffle(raw.toUpperCase().split(""));
+  const tokens = shuffle(sylls.map((s) => s.toUpperCase()));
 
   return {
     id: makeId("scr"),
@@ -216,7 +299,7 @@ function makeScramble(island, stageKey) {
     prompt: `Susun ${field.label} dari ${prov.province}.`,
     tokens,
     answer,
-    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key },
+    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key, fieldLabel: field.label },
   };
 }
 
@@ -269,6 +352,7 @@ function makeOddOneOut(island, stageKey) {
       province: prov.province,
       island: prov.island,
       field: field.key,
+      fieldLabel: field.label,
       good: [provGoodA, provGoodB],
     },
   };
@@ -290,14 +374,10 @@ function makeWordbank(island, stageKey) {
     prompt: `Isi yang benar: ${field.label} ${prov.province} adalah ____`,
     options,
     answer,
-    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key },
+    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: field.key, fieldLabel: field.label },
   };
 }
 
-/**
- * Image question:
- * path: public/images/provinsi/<id>.png
- */
 function makeImageQuestion(island, stageKey, usedProvIds) {
   const prov = pickProvinceByIslandStrict(island);
   if (!prov?.id) return null;
@@ -317,20 +397,21 @@ function makeImageQuestion(island, stageKey, usedProvIds) {
     imageUrl,
     options,
     answer: prov.province,
-    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: "provinceImage" },
+    meta: { provinceId: prov.id, province: prov.province, island: prov.island, field: "provinceImage", fieldLabel: "Provinsi" },
   };
 }
 
+// ===================== RANDOM SOAL TIAP GERBANG (VARIATIF) =====================
 const PACKS = {
   easy: [
-    { type: "mcq", w: 60 },
-    { type: "tf", w: 20 },
-    { type: "match", w: 20 },
+    { type: "mcq", w: 55 },
+    { type: "tf", w: 25 },
+    { type: "scramble", w: 20 },
   ],
   normal: [
-    { type: "mcq", w: 45 },
+    { type: "mcq", w: 40 },
     { type: "scramble", w: 25 },
-    { type: "odd", w: 20 },
+    { type: "odd", w: 25 },
     { type: "tf", w: 10 },
   ],
   hard: [
@@ -341,12 +422,9 @@ const PACKS = {
   ],
 };
 
-function makeMixedQuestion(island, stageKey, usedProvIds) {
+function makeMixedQuestion(island, stageKey, usedProvIds, forcedType = null) {
   const pack = PACKS[stageKey] || PACKS.easy;
-  let type = weightedPickType(pack);
-
-  if (type === "match") type = "mcq";
-  if (type === "review") type = "wordbank";
+  const type = forcedType || weightedPickType(pack);
 
   const makers = {
     mcq: () => makeMCQ(island, stageKey, usedProvIds),
@@ -357,24 +435,47 @@ function makeMixedQuestion(island, stageKey, usedProvIds) {
     image: () => makeImageQuestion(island, stageKey, usedProvIds),
   };
 
-  return makers[type]?.() || makers.mcq?.() || null;
+  return makers[type]?.() || null;
 }
 
 function buildMixedGateQuestions(island, stageKey, count = 3) {
   const out = [];
   const used = new Set();
-  for (let i = 0; i < count; i++) {
-    const q = makeMixedQuestion(island, stageKey, used);
+
+  const planByStage = {
+    easy: ["tf", "scramble", "mcq"],
+    normal: ["scramble", "odd", "mcq"],
+    hard: ["wordbank", "image", "scramble"],
+  };
+  const plan = shuffle((planByStage[stageKey] || ["mcq", "tf", "scramble"]).slice(0, count));
+
+  for (const t of plan) {
+    const q = makeMixedQuestion(island, stageKey, used, t);
+    if (q) out.push(q);
+  }
+
+  const MAX_TRY = 30;
+  let tries = 0;
+  while (out.length < count && tries < MAX_TRY) {
+    tries += 1;
+    const q = makeMixedQuestion(island, stageKey, used, null);
     if (!q) continue;
     out.push(q);
   }
+
   if (!out.length) {
     const q = makeMCQ(island, stageKey, used);
     if (q) out.push(q);
   }
+
   return out.slice(0, count);
 }
-/* ============================================================================ */
+
+function buildGateQuestions(stageKey, region) {
+  const island = region || "Nusantara";
+  const qs = buildMixedGateQuestions(island, stageKey, 3);
+  return qs.map((q) => ({ ...q, __modeId: stageKey }));
+}
 
 /* ===================== BADGE STATS (FINAL) ===================== */
 const BADGE_CATALOG = [
@@ -397,7 +498,6 @@ const BADGE_CATALOG = [
   { id: "badge_score_200_cendrawasih", check: (s) => (s.scoreTotal || 0) >= 200 },
 ];
 
-// ✅ ganti emoji => iconUrl asset badge kamu
 const BADGE_META = {
   badge_level_11_serindit: { label: "Serindit", detail: "Lulus 11 gerbang perfect", iconUrl: "/images/badge/badge_serindit.png", tier: "silver" },
   badge_level_26_pesut: { label: "Pesut", detail: "Lulus 26 gerbang perfect", iconUrl: "/images/badge/badge_pesut.png", tier: "gold" },
@@ -433,7 +533,6 @@ function emptyStats(globalLevelMax = 45) {
     scoreTotal: 0,
   };
 }
-/* ============================================================================ */
 
 export default function ThreeRunnerComplex({
   totalQuestions = 45,
@@ -441,7 +540,7 @@ export default function ThreeRunnerComplex({
   onFinished,
   onGameOver,
   onStatsUpdate,
-  onHome, // optional: kalau kamu mau routing sendiri
+  onHome,
 }) {
   // =========================================================
   // Layout
@@ -507,16 +606,9 @@ export default function ThreeRunnerComplex({
   const gateIndexRef = useRef(0);
 
   // =========================================================
-  // Finish Popup (revisi #1)
+  // Finish Popup
   // =========================================================
   const [finishOpen, setFinishOpen] = useState(false);
-
-  function openFinishPopup() {
-    setFinishOpen(true);
-    try {
-      playSfx("badge"); // efek "selesai"
-    } catch {}
-  }
   function restartGame() {
     window.location.reload();
   }
@@ -620,7 +712,7 @@ export default function ThreeRunnerComplex({
   }
 
   // =========================================================
-  // Pause / GameOver
+  // Pause / GameOver (popup + auto home)
   // =========================================================
   const pausedRef = useRef(false);
   function setPaused(v) {
@@ -629,15 +721,32 @@ export default function ThreeRunnerComplex({
 
   const endedRef = useRef(false);
   const [gameOver, setGameOver] = useState(false);
+  const [gameOverReason, setGameOverReason] = useState("hp0");
+  const goHomeTimerRef = useRef(null);
 
   function hardStopGame(reason = "hp0") {
+    if (endedRef.current) return;
+
     endedRef.current = true;
     setPaused(true);
+    setGameOverReason(reason);
     setGameOver(true);
+
     try {
       onGameOverRef.current?.({ reason, gateIndex: gateIndexRef.current, globalLevel: globalLevelUi });
     } catch {}
+
+    if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
+    goHomeTimerRef.current = window.setTimeout(() => {
+      goHome();
+    }, 1400);
   }
+
+  useEffect(() => {
+    return () => {
+      if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
+    };
+  }, []);
 
   // =========================================================
   // Stage plan
@@ -705,8 +814,6 @@ export default function ThreeRunnerComplex({
   const distRef = useRef(0);
   const [distUi, setDistUi] = useState(0);
   const rafRef = useRef(0);
-
-  const RUN_SPEED_PX = 260;
 
   const NPC_START_X = 900;
   const GAP_NPC_TO_GATE = 520;
@@ -976,24 +1083,29 @@ export default function ThreeRunnerComplex({
     ];
   }
 
-  function buildResultDialog({ perfect, hpNow, streakNow }) {
+  function buildResultDialog({ outcome, hpNow, streakNow }) {
     const lines = [];
-    if (perfect) {
+
+    if (outcome === "perfect") {
       lines.push(
         { role: "guardian", speaker: "Penjaga Gerbang", text: "Tiga kunci. Semuanya pas." },
         { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku berhasil!" },
         { role: "guardian", speaker: "Penjaga Gerbang", text: "Bukan berhasil… kamu menguasai. Ambil berkah ini." },
         { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku merasakan… langkahku lebih mantap." },
-        { role: "guardian", speaker: "Penjaga Gerbang", text: "Teruskan. Nama besar menunggu." },
+        { role: "guardian", speaker: "Penjaga Gerbang", text: "Teruskan. Nama besar menunggu." }
+      );
+    } else if (outcome === "back") {
+      lines.push(
+        { role: "guardian", speaker: "Penjaga Gerbang", text: "Tiga kunci hancur." },
+        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku… gagal total?" },
+        { role: "guardian", speaker: "Penjaga Gerbang", text: "Hukum gerbang berlaku. Kamu harus mundur satu gerbang." },
+        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Baik. Aku akan kembali lebih siap." }
       );
     } else {
       lines.push(
-        { role: "guardian", speaker: "Penjaga Gerbang", text: "Satu kunci retak." },
-        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku… salah?" },
-        { role: "guardian", speaker: "Penjaga Gerbang", text: "Bukan akhir. Tapi hukum gerbang tetap hukum." },
-        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku harus kembali?" },
-        { role: "guardian", speaker: "Penjaga Gerbang", text: "Ya. Mundur satu gerbang. Ulangi, dan kali ini… ingat lebih dalam." },
-        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Baik. Aku akan menebusnya." },
+        { role: "guardian", speaker: "Penjaga Gerbang", text: "Kuncimu belum lengkap." },
+        { role: "guardian", speaker: "Penjaga Gerbang", text: "Nyawamu berkurang." },
+        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku harus lebih hati-hati." }
       );
     }
 
@@ -1001,7 +1113,7 @@ export default function ThreeRunnerComplex({
       lines.push(
         { role: "guardian", speaker: "Penjaga", text: "Api kombo menyala di langkahmu." },
         { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku mulai terbiasa." },
-        { role: "guardian", speaker: "Penjaga", text: "Jangan puas. Biasanya orang jatuh saat merasa aman." },
+        { role: "guardian", speaker: "Penjaga", text: "Jangan puas. Biasanya orang jatuh saat merasa aman." }
       );
     }
 
@@ -1009,8 +1121,8 @@ export default function ThreeRunnerComplex({
       lines.push(
         { role: "guardian", speaker: "Penjaga", text: "Napasmu berat." },
         { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku hampir habis…" },
-        { role: "guardian", speaker: "Penjaga", text: "Kalau fokusmu pecah, kamu akan mundur terus. Gunakan koinmu untuk bantuan… atau tenangkan pikiranmu." },
-        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku akan memilih dengan bijak." },
+        { role: "guardian", speaker: "Penjaga", text: "Kalau fokusmu pecah, kamu bisa jatuh terus. Gunakan koinmu untuk bantuan… atau tenangkan pikiranmu." },
+        { role: "player", speaker: "Petualang", portraitSrc: "/images/guardian/user_kiri.png", text: "Aku akan memilih dengan bijak." }
       );
     }
 
@@ -1018,7 +1130,7 @@ export default function ThreeRunnerComplex({
   }
 
   // =========================================================
-  // Quiz (smooth timer)
+  // Quiz + Hint system
   // =========================================================
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizTitle, setQuizTitle] = useState("Gerbang Ujian");
@@ -1038,7 +1150,49 @@ export default function ThreeRunnerComplex({
   const [totalMsUi, setTotalMsUi] = useState(1);
 
   const [barKey, setBarKey] = useState(0);
-  const [barStart, setBarStart] = useState(true);
+
+  const [hintText, setHintText] = useState("");
+  const hintUsedRef = useRef(new Set());
+
+  function computeHint(q) {
+    if (!q) return "";
+    const ans = (q.answer ?? "").toString().trim();
+    const clean = ans.replace(/\s+/g, "");
+    const first = clean[0] ? clean[0].toUpperCase() : "?";
+    const last = clean[clean.length - 1] ? clean[clean.length - 1].toUpperCase() : "?";
+
+    if (q.type === "scramble") {
+      return `Petunjuk: diawali "${first}", diakhiri "${last}", panjang ${clean.length} huruf.`;
+    }
+    if (q.type === "tf") {
+      const cv = (q.meta?.correctValue ?? "").toString().trim().replace(/\s+/g, "");
+      const f2 = cv[0] ? cv[0].toUpperCase() : first;
+      return `Petunjuk: kata kuncinya diawali "${f2}".`;
+    }
+    return `Petunjuk: jawaban diawali "${first}" dan panjang ${clean.length} huruf.`;
+  }
+
+  function useHint() {
+    const q = quizQRef.current[qi];
+    if (!q) return;
+
+    if (hintUsedRef.current.has(q.id)) {
+      toast("Hint sudah dipakai.");
+      return;
+    }
+    if (coin < 10) {
+      toast("Coin kurang (butuh 10).");
+      return;
+    }
+
+    hintUsedRef.current.add(q.id);
+    setCoin((c) => Math.max(0, c - 10));
+    setHintText(computeHint(q));
+    try {
+      playSfx("badge");
+    } catch {}
+    toast("Hint dipakai. -10 coin");
+  }
 
   const timeoutAppliedRef = useRef(false);
   const qStartMsRef = useRef(0);
@@ -1066,19 +1220,10 @@ export default function ThreeRunnerComplex({
   function applyXpDelta(delta) {
     setXp((x) => {
       const next = clamp(x + delta, 0, xpMax);
-      if (next <= 0) {
-        window.setTimeout(() => hardStopGame("xp0"), 0);
-      }
+      if (next <= 0) window.setTimeout(() => hardStopGame("xp0"), 0);
       return next;
     });
   }
-
-  useEffect(() => {
-    // saat barKey berubah (soal baru), set start true lalu next tick jadi false (trigger transition)
-    setBarStart(true);
-    const t = requestAnimationFrame(() => setBarStart(false));
-    return () => cancelAnimationFrame(t);
-  }, [barKey]);
 
   function startTimer(sec) {
     stopTimer();
@@ -1090,7 +1235,6 @@ export default function ThreeRunnerComplex({
     setTotalMsUi(totalMs);
     setRemainMsUi(totalMs);
 
-    // ✅ trigger restart CSS transition
     setBarKey((k) => k + 1);
 
     const now = Date.now();
@@ -1104,10 +1248,32 @@ export default function ThreeRunnerComplex({
       if (remain <= 0) {
         if (!timeoutAppliedRef.current) {
           timeoutAppliedRef.current = true;
-          // ... (timeout handler kamu yang sekarang)
+
+          // ✅ revisi: timer habis TIDAK menutup quiz, hanya penalty HP/XP
+          const q = quizQRef.current[qi];
+          const stageKey = q?.__modeId || gateRef.current.stageKey || "easy";
+
+          setChecked(true);
+          setLastOutcome("timeout");
+          setGateTimeout((x) => x + 1);
+
+          applyHpDelta(-1);
+          applyXpDelta(-2);
+
+          streakRef.current = 0;
+          setStreak(0);
+
+          updateStatsPerAnswer({ ok: false, timeMs: totalMs, stageKey, curStreak: 0 });
+
+          try {
+            onAnsweredRef.current?.({ ok: false, timeout: true, timeMs: totalMs, question: q, picked: "" });
+          } catch {}
+
+          toast("Waktu habis. -1 HP");
         }
-        return;
+        return; // tetap di quiz, user klik "Lanjut"
       }
+
       rafTimerRef.current = requestAnimationFrame(tick);
     };
 
@@ -1116,15 +1282,11 @@ export default function ThreeRunnerComplex({
 
   useEffect(() => () => stopTimer(), []);
 
-  function buildGateQuestions(stageKey) {
-    const island = gateRef.current.region || "Nusantara";
-    const qs = buildMixedGateQuestions(island, stageKey, 3);
-    return qs.map((q) => ({ ...q, __modeId: stageKey }));
-  }
-
   function openQuiz() {
     const stageKey = gateRef.current.stageKey;
-    const qs = buildGateQuestions(stageKey);
+    const region = gateRef.current.region || "Nusantara";
+    const qs = buildGateQuestions(stageKey, region);
+
     if (!qs.length) {
       setPaused(false);
       return;
@@ -1142,30 +1304,25 @@ export default function ThreeRunnerComplex({
     setChecked(false);
     setLastOutcome("");
 
-    setQuizTitle(`Gerbang Ujian - ${gateRef.current.region || "Nusantara"}`);
+    hintUsedRef.current = new Set();
+    setHintText("");
+
+    setQuizTitle(`Gerbang Ujian - ${region}`);
     quizQRef.current = qs;
 
     const t = stageKey === "easy" ? 12 : stageKey === "normal" ? 10 : 8;
     startTimer(t);
   }
 
-  function onPick(opt) {
-    if (!quizOpen) return;
-    if (checked) return;
-    setSelected(opt);
-  }
-
-  function checkAnswer() {
+  function checkAnswer(pickedOverride) {
     if (!quizOpen) return;
     if (checked) return;
 
     const q = quizQRef.current[qi];
     if (!q) return;
 
-    if (!selected) {
-      toast("Pilih/jawab dulu.");
-      return;
-    }
+    const picked = (pickedOverride ?? selected ?? "").toString();
+    if (!picked) return;
 
     stopTimer();
 
@@ -1174,12 +1331,13 @@ export default function ThreeRunnerComplex({
 
     let ok = false;
     if (q.type === "tf") {
-      const pickedBool = selected === "Benar";
+      const pickedBool = picked === "Benar";
       ok = pickedBool === Boolean(q.answer);
     } else if (q.type === "scramble") {
-      ok = norm(selected) === norm(q.answer);
+      // ✅ scramble: abaikan spasi agar "RUJAKCINGUR" == "Rujak Cingur"
+      ok = normNoSpace(picked) === normNoSpace(q.answer);
     } else {
-      ok = norm(selected) === norm(q.answer);
+      ok = norm(picked) === norm(q.answer);
     }
 
     setChecked(true);
@@ -1215,8 +1373,16 @@ export default function ThreeRunnerComplex({
     }
 
     try {
-      onAnsweredRef.current?.({ ok, timeout: false, timeMs, question: q, picked: selected });
+      onAnsweredRef.current?.({ ok, timeout: false, timeMs, question: q, picked });
     } catch {}
+  }
+
+  function onPick(opt) {
+    if (!quizOpen) return;
+    if (checked) return;
+
+    setSelected(opt);
+    checkAnswer(opt);
   }
 
   function finishGateEvaluation(finalCorrect, finalWrong, finalTimeout) {
@@ -1226,9 +1392,7 @@ export default function ThreeRunnerComplex({
     const afterResult = () => {
       if (perfect) {
         const nextGlobal = globalLevelUi + 1;
-        const shouldGoBack = finalWrong === 3;
 
-        // Gate clear updates
         setGlobalLevelUi(nextGlobal);
         gateIndexRef.current = gateIndexRef.current + 1;
 
@@ -1239,7 +1403,6 @@ export default function ThreeRunnerComplex({
         setHp((h) => Math.min(hpMax, h + 1));
         addScore(20);
 
-        // ✅ selesai semua gerbang => buka popup finish besar
         if (nextGlobal >= Number(totalQuestions || 0)) {
           endedRef.current = true;
           setPaused(true);
@@ -1252,26 +1415,29 @@ export default function ThreeRunnerComplex({
           return;
         }
 
-        if (shouldGoBack) {
-          gateIndexRef.current = Math.max(0, gateIndexRef.current - 1);
-          toast("3 Salah! Mundur 1 gerbang.");
-        } else {
-          toast("Gerbang belum perfect. Coba lagi.");
-        }
-        setPaused(false);
-        setPositionsForGateStep(gateIndexRef.current);
-
+        toast("Perfect! Lanjut gerbang berikutnya.");
         setPaused(false);
         setPositionsForGateStep(gateIndexRef.current);
         return;
       }
 
-      gateIndexRef.current = Math.max(0, gateIndexRef.current - 1);
+      const failedAll = finalWrong + finalTimeout >= 3;
+
+      if (failedAll) {
+        gateIndexRef.current = Math.max(0, gateIndexRef.current - 1);
+        toast("Gagal total! Mundur 1 gerbang.");
+      } else {
+        toast("Nyawamu berkurang.");
+      }
+
       setPaused(false);
       setPositionsForGateStep(gateIndexRef.current);
     };
 
-    openDialog("result", buildResultDialog({ perfect, hpNow: hp, streakNow: streakRef.current }), afterResult);
+    const failedAll = finalWrong + finalTimeout >= 3;
+    const outcome = perfect ? "perfect" : failedAll ? "back" : "retry";
+
+    openDialog("result", buildResultDialog({ outcome, hpNow: hp, streakNow: streakRef.current }), afterResult);
   }
 
   function nextQuestion() {
@@ -1291,6 +1457,7 @@ export default function ThreeRunnerComplex({
     setSelected("");
     setChecked(false);
     setLastOutcome("");
+    setHintText("");
 
     const t = stageKey === "easy" ? 12 : stageKey === "normal" ? 10 : 8;
     startTimer(t);
@@ -1377,9 +1544,6 @@ export default function ThreeRunnerComplex({
     .map((c) => ({ id: c.id, x: Math.round(c.x - distUi) }))
     .filter((c) => c.x > -120 && c.x < (typeof window !== "undefined" ? window.innerWidth : 1200) + 240);
 
-  const tPct = clamp((remainMsUi / Math.max(1, totalMsUi)) * 100, 0, 100);
-  const dangerPulse = remainMsUi > 0 && remainMsUi <= 5000;
-
   const QUESTION_SIZE = isMobile ? 18 : 24;
   const STATEMENT_SIZE = isMobile ? 16 : 20;
   const OPTION_SIZE = isMobile ? 13 : 14;
@@ -1394,7 +1558,6 @@ export default function ThreeRunnerComplex({
 
   const gateImgSrc = gateAssetForRegion(gateRef.current.region);
 
-  // Finish stats (safe snapshot)
   const finishStats = statsRef.current;
   const accEasy = Math.round((finishStats.accuracyByMode.easy || 0) * 100);
   const accNormal = Math.round((finishStats.accuracyByMode.normal || 0) * 100);
@@ -1448,21 +1611,76 @@ export default function ThreeRunnerComplex({
           --text: #f6e7c8;
         }
 
-        @keyframes pulseBar {
-          0%, 100% { transform: scaleY(1); opacity: 0.95; }
-          50% { transform: scaleY(1.55); opacity: 1; }
-        }
+        .bnQuestion { font-weight: 900 !important; }
+
+        /* progress bar: shrinkX outer + pulseBar inner */
+        @keyframes shrinkX { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+        @keyframes pulseBar { 0%, 100% { transform: scaleY(1); opacity: 0.95; } 50% { transform: scaleY(1.55); opacity: 1; } }
+
         @keyframes coinBob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); } }
         @keyframes coinSpin { 0% { transform: translateX(-50%) rotateY(0deg); } 50% { transform: translateX(-50%) rotateY(180deg); } 100% { transform: translateX(-50%) rotateY(360deg); } }
         @keyframes bnBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-
-        @keyframes finishPop {
-          from { transform: translateY(10px) scale(.985); opacity: 0; }
-          to { transform: translateY(0) scale(1); opacity: 1; }
-        }
+        @keyframes finishPop { from { transform: translateY(10px) scale(.985); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
       `}</style>
 
-      {/* ===================== FINISH POPUP (revisi #1) ===================== */}
+      {/* ===================== GAME OVER POPUP ===================== */}
+      {gameOver && !finishOpen ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,.70)",
+            backdropFilter: "blur(8px)",
+            fontFamily: "var(--font)",
+            color: "var(--bn-text)",
+            padding: 14,
+          }}
+        >
+          <div
+            style={{
+              width: isMobile ? "calc(100% - 10px)" : "min(620px, calc(100% - 24px))",
+              borderRadius: "var(--radius)",
+              border: "1px solid rgba(255,255,255,.14)",
+              boxShadow: "var(--bn-shadow)",
+              background: "var(--bn-panel)",
+              overflow: "hidden",
+              animation: "finishPop .18s ease-out both",
+            }}
+          >
+            <div style={{ padding: isMobile ? 14 : 18, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+              <div style={{ fontWeight: 1200, fontSize: isMobile ? 20 : 28 }}>💀 Game Over</div>
+              <div style={{ marginTop: 6, color: "var(--bn-muted)", fontWeight: 900, lineHeight: 1.5 }}>
+                {gameOverReason === "hp0" ? "Nyawamu habis." : "Kamu kehabisan XP."} Kamu akan kembali ke Home…
+              </div>
+            </div>
+            <div style={{ padding: isMobile ? 14 : 18, display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={goHome}
+                style={{
+                  appearance: "none",
+                  cursor: "pointer",
+                  borderRadius: "var(--radius-sm)",
+                  padding: isMobile ? "12px 14px" : "14px 18px",
+                  fontWeight: 1100,
+                  fontSize: isMobile ? 15 : 16,
+                  color: "var(--bn-text)",
+                  background: "rgba(255,255,255,.07)",
+                  border: "1px solid rgba(255,255,255,.12)",
+                }}
+              >
+                Ke Home Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ===================== FINISH POPUP ===================== */}
       {finishOpen ? (
         <div
           style={{
@@ -1498,18 +1716,10 @@ export default function ThreeRunnerComplex({
             </div>
 
             <div style={{ padding: isMobile ? 14 : 18 }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                 <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.10)", borderRadius: "var(--radius-sm)", padding: 14 }}>
                   <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 900 }}>TOTAL SCORE</div>
-                  <div style={{ marginTop: 6, fontSize: isMobile ? 28 : 38, fontWeight: 1200 }}>
-                    {Math.round(finishStats.scoreTotal || 0)}
-                  </div>
+                  <div style={{ marginTop: 6, fontSize: isMobile ? 28 : 38, fontWeight: 1200 }}>{Math.round(finishStats.scoreTotal || 0)}</div>
 
                   <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     <div style={{ background: "rgba(0,0,0,.18)", border: "1px solid rgba(255,255,255,.10)", borderRadius: 14, padding: 10 }}>
@@ -1538,21 +1748,6 @@ export default function ThreeRunnerComplex({
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ fontWeight: 1000 }}>Akurasi Hard</div>
                       <div style={{ fontWeight: 1100 }}>{accHard}%</div>
-                    </div>
-
-                    <div style={{ marginTop: 4, borderTop: "1px solid rgba(255,255,255,.10)", paddingTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                      <div style={{ textAlign: "center", background: "rgba(0,0,0,.18)", border: "1px solid rgba(255,255,255,.10)", borderRadius: 14, padding: 10 }}>
-                        <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 900 }}>Perfect Easy</div>
-                        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 1100 }}>{finishStats.perfectByMode?.easy || 0}</div>
-                      </div>
-                      <div style={{ textAlign: "center", background: "rgba(0,0,0,.18)", border: "1px solid rgba(255,255,255,.10)", borderRadius: 14, padding: 10 }}>
-                        <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 900 }}>Perfect Normal</div>
-                        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 1100 }}>{finishStats.perfectByMode?.normal || 0}</div>
-                      </div>
-                      <div style={{ textAlign: "center", background: "rgba(0,0,0,.18)", border: "1px solid rgba(255,255,255,.10)", borderRadius: 14, padding: 10 }}>
-                        <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 900 }}>Perfect Hard</div>
-                        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 1100 }}>{finishStats.perfectByMode?.hard || 0}</div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1631,8 +1826,8 @@ export default function ThreeRunnerComplex({
               position: "absolute",
               left: c.x,
               bottom: ACTOR_BOTTOM + 62,
-              width: COIN_W,
-              height: COIN_W,
+              width: 34,
+              height: 34,
               transform: "translateX(-50%)",
               animation: "coinBob 1s infinite ease-in-out, coinSpin 1.05s infinite linear",
               userSelect: "none",
@@ -1647,9 +1842,9 @@ export default function ThreeRunnerComplex({
           draggable={false}
           style={{
             position: "absolute",
-            left: PLAYER_X_SCREEN,
+            left: 140,
             bottom: ACTOR_BOTTOM,
-            width: PLAYER_W,
+            width: 90,
             height: "auto",
             userSelect: "none",
             filter: "drop-shadow(0 10px 18px rgba(0,0,0,.35))",
@@ -1663,8 +1858,8 @@ export default function ThreeRunnerComplex({
           style={{
             position: "absolute",
             left: npcScreenX,
-            bottom: ACTOR_BOTTOM + NPC_RAISE_PX,
-            width: NPC_W,
+            bottom: ACTOR_BOTTOM + 18,
+            width: 92,
             height: "auto",
             transform: "translateX(-50%)",
             opacity: npcTriggeredRef.current || dialogOpen ? 1 : 0,
@@ -1673,7 +1868,6 @@ export default function ThreeRunnerComplex({
           }}
         />
 
-        {/* Gate per island */}
         <img
           src={gateImgSrc}
           alt="gate"
@@ -1682,7 +1876,7 @@ export default function ThreeRunnerComplex({
             position: "absolute",
             left: gateScreenX,
             bottom: GATE_BOTTOM,
-            width: GATE_W,
+            width: 170,
             height: "auto",
             transform: "translateX(-50%)",
             filter: "drop-shadow(0 16px 26px rgba(0,0,0,.35))",
@@ -1826,9 +2020,7 @@ export default function ThreeRunnerComplex({
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontWeight: 1100, fontSize: 13 }}>
-                    {dialogKind === "welcome" ? "Sambutan" : dialogKind === "gate" ? "Gerbang Ujian" : "Hasil Gerbang"}
-                  </div>
+                  <div style={{ fontWeight: 1100, fontSize: 13 }}>{dialogKind === "welcome" ? "Sambutan" : dialogKind === "gate" ? "Gerbang Ujian" : "Hasil Gerbang"}</div>
                   <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 800 }}>Klik / Space</div>
                 </div>
 
@@ -1899,9 +2091,8 @@ export default function ThreeRunnerComplex({
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 1100, fontSize: isMobile ? 16 : 20 }}>{quizTitle}</div>
-                
+
                 <div
-                  key={barKey}
                   style={{
                     marginTop: 10,
                     height: 6,
@@ -1914,25 +2105,69 @@ export default function ThreeRunnerComplex({
                   }}
                 >
                   <div
+                    key={barKey}
                     style={{
                       height: "100%",
                       width: "100%",
-                      background: "linear-gradient(90deg, rgba(214,168,79,.95), rgba(58,166,161,.85))",
                       transformOrigin: "left",
-                      // ✅ smooth: 100% -> 0% selama totalMsUi
-                      transform: "scaleX(0)",
-                      transition: `transform ${Math.max(1, totalMsUi)}ms linear`,
-                      // ✅ pulse kalau <=5s (pakai remainMsUi)
-                      animation: remainMsUi > 0 && remainMsUi <= 5000 ? "pulseBar .8s infinite ease-in-out" : "none",
+                      animation: `shrinkX ${Math.max(1, totalMsUi)}ms linear forwards`,
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: "100%",
+                        background: "linear-gradient(90deg, rgba(214,168,79,.95), rgba(58,166,161,.85))",
+                        transformOrigin: "center",
+                        animation: remainMsUi > 0 && remainMsUi <= 5000 ? "pulseBar .8s infinite ease-in-out" : "none",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-              <div />
+
+              <button
+                type="button"
+                onClick={useHint}
+                disabled={checked}
+                style={{
+                  appearance: "none",
+                  cursor: checked ? "not-allowed" : "pointer",
+                  borderRadius: 999,
+                  padding: isMobile ? "10px 12px" : "10px 14px",
+                  fontWeight: 1100,
+                  fontSize: 13,
+                  color: "var(--bn-text)",
+                  background: "rgba(255,255,255,.07)",
+                  border: "1px solid rgba(255,255,255,.12)",
+                  whiteSpace: "nowrap",
+                  opacity: checked ? 0.6 : 1,
+                }}
+              >
+                Hint (-10) 🪙
+              </button>
             </div>
 
             <div style={{ padding: quizPad }}>
               <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.10)", borderRadius: "var(--radius-sm)", padding: isMobile ? 12 : 16 }}>
+                {hintText ? (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: "10px 12px",
+                      borderRadius: 16,
+                      border: "1px solid rgba(214,168,79,.28)",
+                      background: "rgba(214,168,79,.10)",
+                      color: "rgba(246,231,200,.92)",
+                      fontWeight: 900,
+                      fontSize: 13,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {hintText}
+                  </div>
+                ) : null}
+
                 {(() => {
                   const q = quizQRef.current[qi];
                   if (!q) return null;
@@ -1942,7 +2177,7 @@ export default function ThreeRunnerComplex({
                   if (q.type === "image") {
                     return (
                       <>
-                        <p style={{ fontWeight: 1200, margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
+                        <p className="bnQuestion" style={{ margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
                           {q.prompt}
                         </p>
 
@@ -2006,7 +2241,7 @@ export default function ThreeRunnerComplex({
                   if (q.type === "tf") {
                     return (
                       <>
-                        <div style={{ fontSize: STATEMENT_SIZE, fontWeight: 1100, lineHeight: 1.22, marginBottom: 14 }}>
+                        <div className="bnQuestion" style={{ fontSize: STATEMENT_SIZE, lineHeight: 1.22, marginBottom: 14 }}>
                           {q.statement}
                         </div>
 
@@ -2042,9 +2277,11 @@ export default function ThreeRunnerComplex({
 
                   if (q.type === "scramble") {
                     const current = selected || "";
+                    const cleanAns = (q.answer || "").toString().replace(/\s+/g, "").toLowerCase();
+
                     return (
                       <>
-                        <p style={{ fontWeight: 1100, margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
+                        <p className="bnQuestion" style={{ margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
                           {q.prompt}
                         </p>
 
@@ -2059,7 +2296,7 @@ export default function ThreeRunnerComplex({
                             justifyContent: "center",
                             fontWeight: 1100,
                             fontSize: isMobile ? 20 : 24,
-                            letterSpacing: 2,
+                            letterSpacing: 1,
                             background: "rgba(0,0,0,.12)",
                           }}
                         >
@@ -2072,13 +2309,20 @@ export default function ThreeRunnerComplex({
                               key={`${tkn}-${idx}`}
                               onClick={() => {
                                 if (checked) return;
-                                setSelected((prev) => `${(prev || "")}${tkn}`);
+                                const next = `${selected ? `${selected} ` : ""}${tkn}`; // ✅ tambahkan spasi antar token
+                                setSelected(next);
+
+                                const cleanNext = next.replace(/\s+/g, "").toLowerCase();
+                                if (cleanNext === cleanAns || cleanNext.length >= cleanAns.length) {
+                                  checkAnswer(next);
+                                }
                               }}
                               role="button"
                               tabIndex={0}
                               style={{
-                                width: isMobile ? 40 : 46,
-                                height: isMobile ? 40 : 46,
+                                minWidth: isMobile ? 64 : 76,
+                                height: isMobile ? 44 : 48,
+                                padding: "0 12px",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -2124,7 +2368,7 @@ export default function ThreeRunnerComplex({
 
                   return (
                     <>
-                      <p style={{ fontWeight: 1100, margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
+                      <p className="bnQuestion" style={{ margin: "0 0 18px 0", fontSize: QUESTION_SIZE, lineHeight: 1.12 }}>
                         {q.prompt}
                       </p>
 
@@ -2170,25 +2414,7 @@ export default function ThreeRunnerComplex({
               <div style={{ color: "var(--bn-muted)", fontWeight: 1000, fontSize: 14 }}>{`${gateCorrect}/3`}</div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {!checked ? (
-                  <button
-                    type="button"
-                    onClick={checkAnswer}
-                    style={{
-                      appearance: "none",
-                      cursor: "pointer",
-                      borderRadius: "var(--radius-sm)",
-                      padding: isMobile ? "12px 14px" : "14px 18px",
-                      fontWeight: 1100,
-                      fontSize: isMobile ? 16 : 18,
-                      color: "var(--primary-text)",
-                      background: "var(--primary-bg)",
-                      border: "1px solid var(--primary-border)",
-                    }}
-                  >
-                    Cek Jawaban
-                  </button>
-                ) : (
+                {checked ? (
                   <button
                     type="button"
                     onClick={nextQuestion}
@@ -2206,6 +2432,8 @@ export default function ThreeRunnerComplex({
                   >
                     Lanjut
                   </button>
+                ) : (
+                  <div style={{ color: "var(--bn-muted)", fontWeight: 900, fontSize: 13 }}>Pilih jawaban untuk lanjut</div>
                 )}
               </div>
             </div>
