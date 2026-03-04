@@ -1988,79 +1988,140 @@ export default function ThreeRunnerComplex({
               border: "1px solid var(--bn-line)",
               boxShadow: "var(--bn-shadow)",
               backdropFilter: "blur(10px)",
-              minHeight: 150,
-              maxHeight: isMobile ? "46vh" : "none",
-              overflow: isMobile ? "auto" : "hidden",
+              minHeight: isMobile ? 120 : 150,
+              // ✅ jangan pakai scroll internal
+              overflowX: "hidden",
+              overflowY: "hidden",
             }}
           >
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "148px 1fr",
-                gap: 12,
-                padding: 12,
-                alignItems: "stretch",
+                gridTemplateColumns: isMobile ? "88px 1fr" : "148px 1fr",
+                gap: isMobile ? 10 : 12,
+                padding: isMobile ? 10 : 12,
+                alignItems: "start",
               }}
             >
+              {/* Avatar column */}
               <div
                 style={{
                   borderRadius: "var(--radius-sm)",
                   background: "var(--inner-bg)",
                   border: "1px solid rgba(255,255,255,.14)",
                   overflow: "hidden",
-                  minHeight: isMobile ? 92 : 120,
-                  position: "relative",
+                  width: isMobile ? 88 : "100%",
+                  height: isMobile ? 88 : 120,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <img
                   src={dialogPortraitSrc}
                   alt="npc"
                   draggable={false}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", padding: isMobile ? 2 : 6 }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    padding: isMobile ? 2 : 6,
+                  }}
                   onError={(e) => {
                     e.currentTarget.src = GUARDIAN_IMAGES[0];
                   }}
                 />
+              </div>
+
+              {/* Content column */}
+              <div style={{ minWidth: 0, position: "relative" }}>
+                {/* Klik/Space overlay (tidak makan space) */}
                 <div
                   style={{
                     position: "absolute",
-                    left: 8,
-                    bottom: 8,
-                    background: "rgba(0,0,0,.35)",
-                    border: "1px solid rgba(255,255,255,.12)",
-                    padding: "5px 9px",
-                    borderRadius: 999,
-                    fontWeight: 1000,
+                    top: 0,
+                    right: 0,
                     fontSize: 12,
+                    color: "var(--bn-muted)",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    opacity: 0.95,
                   }}
                 >
-                  {dialogSpeaker}
-                </div>
-              </div>
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontWeight: 1100, fontSize: 13 }}>{dialogKind === "welcome" ? "Sambutan" : dialogKind === "gate" ? "Gerbang Ujian" : "Hasil Gerbang"}</div>
-                  <div style={{ fontSize: 12, color: "var(--bn-muted)", fontWeight: 800 }}>Klik / Space</div>
+                  Klik / Space
                 </div>
 
+                {/* Header row */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    paddingRight: 96, // ruang buat Klik/Space
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "rgba(0,0,0,.35)",
+                      border: "1px solid rgba(255,255,255,.12)",
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      fontWeight: 1100,
+                      fontSize: 12,
+                      whiteSpace: "nowrap",
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    {dialogSpeaker}
+                  </div>
+
+                  <div
+                    style={{
+                      fontWeight: 1100,
+                      fontSize: 13,
+                      opacity: 0.92,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {dialogKind === "welcome" ? "Sambutan" : dialogKind === "gate" ? "Gerbang Ujian" : "Hasil Gerbang"}
+                  </div>
+                </div>
+
+                {/* Text */}
                 <div
                   style={{
                     marginTop: 8,
-                    fontSize: 18,
-                    lineHeight: 1.5,
-                    minHeight: 84,
+                    fontSize: isMobile ? 16 : 18,
+                    lineHeight: 1.4,
                     opacity: dialogFadeOut ? 0 : 1,
                     transition: "opacity .22s ease",
                     position: "relative",
                     paddingRight: 28,
                     textShadow: "0 2px 10px rgba(0,0,0,.35)",
-                    wordBreak: "break-word",
+
+                    // ✅ ini kunci supaya teks tidak jadi "Hei, / Petualan / g!"
+                    whiteSpace: "normal",
+                    wordBreak: "normal",
+                    overflowWrap: "break-word",
+                    hyphens: "none",
                   }}
                 >
                   {dialogTyped}
+
                   {!dialogTyping ? (
-                    <span style={{ position: "absolute", right: 8, bottom: 4, color: "rgba(255,255,255,.65)", animation: "bnBob 1s infinite ease-in-out", userSelect: "none" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        bottom: 0,
+                        color: "rgba(255,255,255,.65)",
+                        animation: "bnBob 1s infinite ease-in-out",
+                        userSelect: "none",
+                      }}
+                    >
                       ▾
                     </span>
                   ) : null}
