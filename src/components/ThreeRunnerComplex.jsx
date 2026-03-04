@@ -2114,13 +2114,6 @@ export default function ThreeRunnerComplex({
             <div style={{ height: "100%", width: `${xpPct}%`, background: "linear-gradient(90deg, rgba(214,168,79,.95), rgba(58,166,161,.85))", transition: "width .2s ease" }} />
           </div>
         </div>
-
-        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--bn-muted)", fontWeight: 900 }}>
-          <span>Lv</span>
-          <span>
-            {globalLevelUi}/{Number(totalGates || 0)}
-          </span>
-        </div>
       </div>
 
       {/* ===================== Dialog (Avatar kiri + dialog kanan) ===================== */}

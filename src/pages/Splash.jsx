@@ -140,16 +140,6 @@ export default function Splash() {
               Daftar
             </button>
           </div>
-
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              onClick={goLogin}
-              className="text-sm ui-muted underline underline-offset-4"
-            >
-              Lewati & masuk nanti
-            </button>
-          </div>
         </section>
       </div>
     </div>
