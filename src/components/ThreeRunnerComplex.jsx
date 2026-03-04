@@ -542,26 +542,35 @@ export default function ThreeRunnerComplex({
   onStatsUpdate,
   onHome,
 }) {
-  // =========================================================
-  // Layout
-  // =========================================================
-  const TOPBAR_OFFSET_PX = 96;
-  const HUD_TOP = TOPBAR_OFFSET_PX + 14;
-  const HUD_LEFT = 14;
-  const HUD_MIN_WIDTH = 200;
-
-  const HUD_RIGHT_GAP = 14;
-  const DIALOG_TOP = HUD_TOP;
-  const DIALOG_LEFT_CSS = `calc(${HUD_LEFT}px + ${HUD_MIN_WIDTH}px + ${HUD_RIGHT_GAP}px)`;
-  const DIALOG_RIGHT = 14;
-
   const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 640);
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+  // =========================================================
+  // Layout
+  // =========================================================
+  const TOPBAR_OFFSET_PX = 96;
+
+  // jarak dari topbar
+  const HUD_TOP = TOPBAR_OFFSET_PX + 14;
+
+  // ===== responsive layout =====
+  const HUD_LEFT = isMobile ? 10 : 14;
+  
+  const HUD_RIGHT = isMobile ? 10 : undefined;
+  const HUD_WIDTH = isMobile ? "calc(100% - 20px)" : 200;
+
+  const DIALOG_TOP = isMobile ? HUD_TOP + 118 : HUD_TOP; // dialog turun di bawah HUD (mobile)
+  const DIALOG_LEFT = isMobile ? 10 : undefined;
+  const DIALOG_RIGHT = 10;
+
+  // untuk desktop: dialog di kanan HUD
+  const HUD_RIGHT_GAP = 14;
+  const DIALOG_LEFT_CSS = isMobile ? undefined : `calc(${14}px + ${200}px + ${HUD_RIGHT_GAP}px)`;
 
   // =========================================================
   // Callback refs
@@ -1893,8 +1902,9 @@ export default function ThreeRunnerComplex({
           position: "fixed",
           top: HUD_TOP,
           left: HUD_LEFT,
+          right: isMobile ? 10 : undefined,
           zIndex: 50,
-          width: HUD_MIN_WIDTH,
+          width: HUD_WIDTH,
           background: "var(--bn-panel)",
           border: "1px solid var(--bn-line)",
           borderRadius: "var(--radius-sm)",
@@ -1961,7 +1971,7 @@ export default function ThreeRunnerComplex({
           style={{
             position: "fixed",
             top: DIALOG_TOP,
-            left: DIALOG_LEFT_CSS,
+            left: isMobile ? DIALOG_LEFT : DIALOG_LEFT_CSS,
             right: DIALOG_RIGHT,
             zIndex: 60,
             pointerEvents: "auto",
@@ -1979,16 +1989,26 @@ export default function ThreeRunnerComplex({
               boxShadow: "var(--bn-shadow)",
               backdropFilter: "blur(10px)",
               minHeight: 150,
+              maxHeight: isMobile ? "46vh" : "none",
+              overflow: isMobile ? "auto" : "hidden",
             }}
           >
-            <div style={{ display: "grid", gridTemplateColumns: `148px 1fr`, gap: 12, padding: 12, alignItems: "stretch" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "148px 1fr",
+                gap: 12,
+                padding: 12,
+                alignItems: "stretch",
+              }}
+            >
               <div
                 style={{
                   borderRadius: "var(--radius-sm)",
                   background: "var(--inner-bg)",
                   border: "1px solid rgba(255,255,255,.14)",
                   overflow: "hidden",
-                  minHeight: 120,
+                  minHeight: isMobile ? 92 : 120,
                   position: "relative",
                 }}
               >
@@ -1996,7 +2016,7 @@ export default function ThreeRunnerComplex({
                   src={dialogPortraitSrc}
                   alt="npc"
                   draggable={false}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", padding: 6 }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain", padding: isMobile ? 2 : 6 }}
                   onError={(e) => {
                     e.currentTarget.src = GUARDIAN_IMAGES[0];
                   }}
