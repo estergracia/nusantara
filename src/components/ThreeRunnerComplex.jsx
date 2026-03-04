@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import nusantaraData from "../data/nusantaraData";
 import { playSfx } from "../utils/sfx";
 import BadgeUnlockPopup from "./BadgeUnlockPopup";
+import Telemetry from "../utils/telemetry"; // ✅ telemetry integration
 
 /* =========================================================
    Helpers
@@ -603,9 +604,16 @@ export default function ThreeRunnerComplex({
   /* ===================== Finish Popup ===================== */
   const [finishOpen, setFinishOpen] = useState(false);
   function restartGame() {
+    try {
+      Telemetry.trackClick();
+    } catch {}
     window.location.reload();
   }
   function goHome() {
+    try {
+      Telemetry.trackNavigation();
+      Telemetry.endSession();
+    } catch {}
     if (typeof onHomeRef.current === "function") {
       onHomeRef.current();
       return;
@@ -655,6 +663,10 @@ export default function ThreeRunnerComplex({
 
     try {
       onGameOverRef.current?.({ reason, gateIndex: gateIndexRef.current, globalLevel: globalLevelUi });
+    } catch {}
+
+    try {
+      Telemetry.endSession();
     } catch {}
 
     if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
@@ -738,6 +750,42 @@ export default function ThreeRunnerComplex({
       { key: "merchant", w: 5 },
     ]);
   }
+
+  /* ===================== Telemetry helpers ===================== */
+  function applyUiDataAttrFromStage(stageKey) {
+    // telemetry.js mengerti "easy/normal/hard" dan akan map ke UI mode
+    // tapi CSS kamu pakai data-ui: simple/medium/complex, jadi kita set di sini juga.
+    const st = String(stageKey || "").toLowerCase();
+    const ui = st === "easy" ? "simple" : st === "normal" ? "medium" : "complex";
+    try {
+      if (typeof document !== "undefined") document.documentElement.dataset.ui = ui;
+    } catch {}
+  }
+
+  function syncTelemetryMode(stageKey) {
+    try {
+      Telemetry.setMode(stageKey); // boleh "easy/normal/hard" karena telemetry normalizeMode() memetakan
+    } catch {}
+    applyUiDataAttrFromStage(stageKey);
+  }
+
+  // Start telemetry session once
+  useEffect(() => {
+    const initialStage = stageKeyForGateIndex(gateIndexRef.current || 0);
+    syncTelemetryMode(initialStage);
+
+    // startSession tanpa uid: telemetry akan ambil dari firebase auth saat ready
+    try {
+      Telemetry.startSession({ mode: initialStage });
+    } catch {}
+
+    return () => {
+      try {
+        Telemetry.endSession();
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ===================== Stats + Badge Engine ===================== */
   const statsRef = useRef(emptyStats(Number(totalGates || 0)));
@@ -978,6 +1026,11 @@ export default function ThreeRunnerComplex({
 
   async function nextDialog() {
     if (!dialogOpen) return;
+
+    // ✅ click telemetry
+    try {
+      Telemetry.trackClick();
+    } catch {}
 
     if (dialogTyping) {
       typingAbortRef.current.abort = true;
@@ -1233,6 +1286,10 @@ export default function ThreeRunnerComplex({
     const q = quizQRef.current[qi];
     if (!q) return;
 
+    try {
+      Telemetry.trackClick();
+    } catch {}
+
     if (hintUsedRef.current.has(q.id)) {
       toast("Hint sudah dipakai.");
       return;
@@ -1329,6 +1386,11 @@ export default function ThreeRunnerComplex({
 
           updateStatsPerAnswer({ ok: false, timeMs: totalMs, stageKey, curStreak: 0 });
 
+          // ✅ telemetry: wrong answer
+          try {
+            Telemetry.trackAnswer({ isCorrect: false });
+          } catch {}
+
           try {
             onAnsweredRef.current?.({ ok: false, timeout: true, timeMs: totalMs, question: q, picked: "" });
           } catch {}
@@ -1355,6 +1417,9 @@ export default function ThreeRunnerComplex({
       setPaused(false);
       return;
     }
+
+    // ✅ telemetry: sync mode tiap buka quiz
+    syncTelemetryMode(stageKey);
 
     setPaused(true);
     setQuizOpen(true);
@@ -1387,6 +1452,11 @@ export default function ThreeRunnerComplex({
 
     const picked = (pickedOverride ?? selected ?? "").toString();
     if (!picked) return;
+
+    // ✅ telemetry: click answer
+    try {
+      Telemetry.trackClick();
+    } catch {}
 
     stopTimer();
 
@@ -1434,6 +1504,11 @@ export default function ThreeRunnerComplex({
 
       updateStatsPerAnswer({ ok: false, timeMs, stageKey, curStreak: 0 });
 
+      // ✅ telemetry: wrong answer
+      try {
+        Telemetry.trackAnswer({ isCorrect: false });
+      } catch {}
+
       toast("Salah. -1 HP");
     }
 
@@ -1458,6 +1533,11 @@ export default function ThreeRunnerComplex({
       // ✅ selalu maju ke gerbang berikutnya (tidak mengulang pulau)
       const nextGateIndex = gateIndexRef.current + 1;
       gateIndexRef.current = nextGateIndex;
+
+      // ✅ telemetry: navigation (pindah gerbang)
+      try {
+        Telemetry.trackNavigation();
+      } catch {}
 
       if (perfect) {
         const nextGlobal = globalLevelUi + 1;
@@ -1485,10 +1565,18 @@ export default function ThreeRunnerComplex({
         setFinishOpen(true);
 
         try {
+          Telemetry.endSession();
+        } catch {}
+
+        try {
           onFinishedRef.current?.();
         } catch {}
         return;
       }
+
+      // ✅ stage berikutnya mungkin beda -> sync telemetry mode + data-ui
+      const nextStage = stageKeyForGateIndex(nextGateIndex);
+      syncTelemetryMode(nextStage);
 
       setPaused(false);
       setPositionsForGateStep(nextGateIndex);
@@ -1502,6 +1590,10 @@ export default function ThreeRunnerComplex({
 
   function nextQuestion() {
     if (!quizOpen) return;
+
+    try {
+      Telemetry.trackClick();
+    } catch {}
 
     const stageKey = gateRef.current.stageKey;
     const next = qi + 1;
@@ -1563,6 +1655,9 @@ export default function ThreeRunnerComplex({
               setQuizOpen(false);
               setFinishOpen(true);
               try {
+                Telemetry.endSession();
+              } catch {}
+              try {
                 onFinishedRef.current?.();
               } catch {}
               rafRef.current = requestAnimationFrame(tick);
@@ -1575,6 +1670,9 @@ export default function ThreeRunnerComplex({
             const guardianSrc = pickRandomGuardian();
 
             gateRef.current = { stageKey, gateType, region, guardianSrc };
+
+            // ✅ telemetry: mode mengikuti stage gate yang aktif
+            syncTelemetryMode(stageKey);
 
             openDialog("welcome", buildWelcomeConversation(stageKey, region));
             rafRef.current = requestAnimationFrame(tick);
@@ -2444,6 +2542,9 @@ export default function ThreeRunnerComplex({
                               key={`${tkn}-${idx}`}
                               onClick={() => {
                                 if (checked) return;
+                                try {
+                                  Telemetry.trackClick();
+                                } catch {}
                                 const next = `${selected ? `${selected} ` : ""}${tkn}`;
                                 setSelected(next);
 
@@ -2480,6 +2581,9 @@ export default function ThreeRunnerComplex({
                             type="button"
                             onClick={() => {
                               if (checked) return;
+                              try {
+                                Telemetry.trackClick();
+                              } catch {}
                               setSelected("");
                             }}
                             style={{
