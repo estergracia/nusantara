@@ -1243,7 +1243,6 @@ export default function ThreeRunnerComplex({
 
     setTotalMsUi(totalMs);
     setRemainMsUi(totalMs);
-
     setBarKey((k) => k + 1);
 
     const now = Date.now();
@@ -1251,14 +1250,23 @@ export default function ThreeRunnerComplex({
     deadlineMsRef.current = now + totalMs;
 
     const tick = () => {
+      // kalau quiz udah ketutup, stop
+      if (!quizOpen) {
+        stopTimer();
+        return;
+      }
+
       const remain = Math.max(0, deadlineMsRef.current - Date.now());
       setRemainMsUi(remain);
 
       if (remain <= 0) {
+        // ✅ cuma apply sekali
         if (!timeoutAppliedRef.current) {
           timeoutAppliedRef.current = true;
 
-          // ✅ revisi: timer habis TIDAK menutup quiz, hanya penalty HP/XP
+          // ✅ STOP anim/timer loop, tapi quiz tetap terbuka
+          stopTimer();
+
           const q = quizQRef.current[qi];
           const stageKey = q?.__modeId || gateRef.current.stageKey || "easy";
 
@@ -1280,7 +1288,8 @@ export default function ThreeRunnerComplex({
 
           toast("Waktu habis. -1 HP");
         }
-        return; // tetap di quiz, user klik "Lanjut"
+        // ✅ jangan lanjut RAF lagi
+        return;
       }
 
       rafTimerRef.current = requestAnimationFrame(tick);
@@ -2048,7 +2057,7 @@ export default function ThreeRunnerComplex({
                     opacity: 0.95,
                   }}
                 >
-                  Klik / Space
+                  Klik
                 </div>
 
                 {/* Header row */}
