@@ -35,10 +35,12 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-function stageKeyForLevel(level) {
-  if (level < 15) return "easy";
-  if (level < 30) return "normal";
-  return "hard";
+function stageKeyFromStats(stats) {
+  const hard = Number(stats?.perfectByMode?.hard || 0);
+  const normal = Number(stats?.perfectByMode?.normal || 0);
+  if (hard > 0) return "hard";
+  if (normal > 0) return "normal";
+  return "easy";
 }
 
 function stageLabel(stageKey) {
@@ -125,17 +127,22 @@ export default function Home() {
 
   const isNewUser = attemptTotal === 0 && sessions === 0 && !stats?.lastPlayedAt;
 
-  // ✅ campaign level (0..45) untuk progress bar
+  // ✅ progress gerbang (mengikuti totalGates dari ThreeRunnerComplex via stats.globalLevelMax)
   const levelMeta = useMemo(() => {
-    const total = CAMPAIGN_TOTAL_LEVELS; // 45
-    const cur = clamp(Number(stats?.globalLevelMax ?? stats?.globalLevel ?? 0), 0, total);
+    // total gates/pulau: dikirim dari game runner sebagai globalLevelMax
+    const totalFromStats = Number(stats?.globalLevelMax || 0);
+    const fallbackTotal = Number(CAMPAIGN_TOTAL_LEVELS || 0); // fallback lama kalau stats belum ada
+    const total = clamp(totalFromStats || fallbackTotal || 0, 0, 9999);
 
-    // tampilkan Lv 1 untuk user baru
+    // jumlah gerbang yang PERFECT (globalLevel)
+    const cur = clamp(Number(stats?.globalLevel || 0), 0, total || 0);
+
+    // label “Lv” biar tetap enak dilihat (minimal 1)
     const lvl = Math.max(1, cur === 0 ? 1 : cur);
 
     const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
     return { lvl, cur, total, pct: clamp(pct, 0, 100) };
-  }, [stats?.globalLevel]);
+  }, [stats?.globalLevel, stats?.globalLevelMax]);
 
   if (is.simple) {
     return (
@@ -234,7 +241,7 @@ export default function Home() {
                     <div className="ui-progress__fill" style={{ width: `${levelMeta.pct}%` }} />
                   </div>
                   <div className="mt-2 text-xs ui-muted">
-                    Lv {levelMeta.lvl} • {levelMeta.cur}/{levelMeta.total} soal
+                    Gerbang {levelMeta.cur}/{levelMeta.total}
                   </div>
                 </div>
 
@@ -269,7 +276,7 @@ export default function Home() {
   // =========================
   // COMPLEX (layout baru, tapi styling pakai CSS lama kamu)
   // =========================
-  const stageKey = stageKeyForLevel(levelMeta.cur);
+  const stageKey = stageKeyFromStats(stats);
   const stageText = stageLabel(stageKey);
   const statusText = statusLabel(stageKey);
 
