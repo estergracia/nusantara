@@ -654,6 +654,11 @@ export default function ThreeRunnerComplex({
   const goHomeTimerRef = useRef(null);
 
   function hardStopGame(reason = "hp0") {
+    if (reason === "hp0") {
+      openFinalResults("hp0");
+      return;
+    }
+
     if (endedRef.current) return;
 
     endedRef.current = true;
@@ -668,11 +673,30 @@ export default function ThreeRunnerComplex({
     try {
       Telemetry.endSession();
     } catch {}
+  }
 
-    if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
-    goHomeTimerRef.current = window.setTimeout(() => {
-      goHome();
-    }, 1400);
+  function openFinalResults(reason = "finished") {
+    if (endedRef.current) return;
+
+    endedRef.current = true;
+    setPaused(true);
+    setQuizOpen(false);
+    setDialogOpen(false);
+    stopTimer();
+
+    try {
+      onGameOverRef.current?.({
+        reason,
+        gateIndex: gateIndexRef.current,
+        globalLevel: globalLevelUi,
+      });
+    } catch {}
+
+    try {
+      Telemetry.endSession();
+    } catch {}
+
+    setFinishOpen(true);
   }
 
   useEffect(() => {
