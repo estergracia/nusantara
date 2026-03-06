@@ -2700,3 +2700,15 @@ body::after{
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+:root[data-ui="complex"] .bn-badgeIconWrap{
+  width: 84px;
+  height: 84px;
+  flex-basis: 84px;
+}
+
+:root[data-ui="medium"] .bn-badgeIconWrap{
+  width: 84px;
+  height: 84px;
+  flex-basis: 84px;
+}

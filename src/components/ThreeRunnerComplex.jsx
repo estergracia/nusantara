@@ -1330,11 +1330,7 @@ export default function ThreeRunnerComplex({
   }
 
   function applyXpDelta(delta) {
-    setXp((x) => {
-      const next = clamp(x + delta, 0, xpMax);
-      if (next <= 0) window.setTimeout(() => hardStopGame("xp0"), 0);
-      return next;
-    });
+    setXp((x) => clamp(x + delta, 0, xpMax));
   }
 
   // ✅ timer habis: quiz tetap terbuka (desktop & mobile)
