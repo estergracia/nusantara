@@ -752,21 +752,19 @@ export default function ThreeRunnerComplex({
   }
 
   /* ===================== Telemetry helpers ===================== */
-  function applyUiDataAttrFromStage(stageKey) {
-    // telemetry.js mengerti "easy/normal/hard" dan akan map ke UI mode
-    // tapi CSS kamu pakai data-ui: simple/medium/complex, jadi kita set di sini juga.
-    const st = String(stageKey || "").toLowerCase();
-    const ui = st === "easy" ? "simple" : st === "normal" ? "medium" : "complex";
+  function applyStageAttr(stageKey) {
     try {
-      if (typeof document !== "undefined") document.documentElement.dataset.ui = ui;
+      if (typeof document !== "undefined") {
+        document.documentElement.dataset.stage = String(stageKey || "").toLowerCase();
+      }
     } catch {}
   }
 
   function syncTelemetryMode(stageKey) {
     try {
-      Telemetry.setMode(stageKey); // boleh "easy/normal/hard" karena telemetry normalizeMode() memetakan
+      Telemetry.setMode(stageKey);
     } catch {}
-    applyUiDataAttrFromStage(stageKey);
+    applyStageAttr(stageKey);
   }
 
   // Start telemetry session once
