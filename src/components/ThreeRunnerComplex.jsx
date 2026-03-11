@@ -624,19 +624,30 @@ export default function ThreeRunnerComplex({
   /* ===================== Badge Popup Queue ===================== */
   const unlockedBadgesRef = useRef(new Set());
   const badgeQueueRef = useRef([]);
+  const pendingBadgeIdsRef = useRef([]);
   const [badgePopup, setBadgePopup] = useState(null);
 
   function openNextBadgePopup() {
     if (badgePopup) return;
     const id = badgeQueueRef.current.shift();
     if (!id) return;
-    const meta = BADGE_META[id] || { label: "Badge Unlocked", detail: id, iconUrl: "/images/badge/badge_belida.png", tier: "bronze" };
+
+    const meta =
+      BADGE_META[id] || {
+        label: "Badge Unlocked",
+        detail: id,
+        iconUrl: "/images/badge/badge_belida.png",
+        tier: "bronze",
+      };
+
     setBadgePopup({ badgeId: id, meta });
   }
+
   function enqueueBadge(id) {
-    badgeQueueRef.current.push(id);
-    openNextBadgePopup();
+    if (badgeQueueRef.current.includes(id) || pendingBadgeIdsRef.current.includes(id)) return;
+    pendingBadgeIdsRef.current.push(id);
   }
+
   function closeBadgePopup() {
     setBadgePopup(null);
     window.setTimeout(() => openNextBadgePopup(), 60);
@@ -654,28 +665,21 @@ export default function ThreeRunnerComplex({
   const goHomeTimerRef = useRef(null);
 
   function hardStopGame(reason = "hp0") {
-    if (reason === "hp0") {
-      openFinalResults("hp0");
-      return;
-    }
-
-    if (endedRef.current) return;
-
-    endedRef.current = true;
-    setPaused(true);
-    setGameOverReason(reason);
-    setGameOver(true);
-
-    try {
-      onGameOverRef.current?.({ reason, gateIndex: gateIndexRef.current, globalLevel: globalLevelUi });
-    } catch {}
-
-    try {
-      Telemetry.endSession();
-    } catch {}
+    endComplexRun(reason);
   }
 
-  function openFinalResults(reason = "finished") {
+  function flushBadgesToQueue() {
+    if (!pendingBadgeIdsRef.current.length) return;
+
+    badgeQueueRef.current.push(...pendingBadgeIdsRef.current);
+    pendingBadgeIdsRef.current = [];
+
+    if (!badgePopup) {
+      openNextBadgePopup();
+    }
+  }
+
+  function endComplexRun(reason = "finished") {
     if (endedRef.current) return;
 
     endedRef.current = true;
@@ -684,19 +688,45 @@ export default function ThreeRunnerComplex({
     setDialogOpen(false);
     stopTimer();
 
-    try {
-      onGameOverRef.current?.({
-        reason,
-        gateIndex: gateIndexRef.current,
-        globalLevel: globalLevelUi,
-      });
-    } catch {}
+    const payload = {
+      reason,
+      gateIndex: gateIndexRef.current,
+      totalGates: Number(totalGates || 0),
+      globalLevel: statsRef.current.globalLevel,
+      stats: { ...statsRef.current },
+      hp,
+      coin,
+      xp,
+    };
 
     try {
       Telemetry.endSession();
     } catch {}
 
-    setFinishOpen(true);
+    // badge baru muncul di akhir permainan
+    flushBadgesToQueue();
+
+    if (reason === "finished") {
+      try {
+        onFinishedRef.current?.(payload);
+      } catch {}
+    } else {
+      try {
+        onGameOverRef.current?.(payload);
+      } catch {}
+    }
+
+    // fallback kalau parent belum handle callback
+    if (reason === "finished") {
+      setFinishOpen(true);
+    } else {
+      setGameOverReason(reason);
+      setGameOver(true);
+    }
+  }
+
+  function openFinalResults(reason = "finished") {
+    endComplexRun(reason === "finished" ? "finished" : reason);
   }
 
   useEffect(() => {
@@ -822,15 +852,17 @@ export default function ThreeRunnerComplex({
     const s = statsRef.current;
     for (const b of BADGE_CATALOG) {
       if (unlockedBadgesRef.current.has(b.id)) continue;
+
       let ok = false;
       try {
         ok = !!b.check(s);
       } catch {
         ok = false;
       }
+
       if (ok) {
         unlockedBadgesRef.current.add(b.id);
-        enqueueBadge(b.id);
+        enqueueBadge(b.id); // sekarang cuma pending
       }
     }
   }
@@ -1577,18 +1609,7 @@ export default function ThreeRunnerComplex({
 
       // ✅ cek finish berdasarkan jumlah gerbang/pulau
       if (nextGateIndex >= Number(totalGates || 0)) {
-        endedRef.current = true;
-        setPaused(true);
-        setQuizOpen(false);
-        setFinishOpen(true);
-
-        try {
-          Telemetry.endSession();
-        } catch {}
-
-        try {
-          onFinishedRef.current?.();
-        } catch {}
+        endComplexRun("finished");
         return;
       }
 
@@ -1668,16 +1689,7 @@ export default function ThreeRunnerComplex({
 
             // ✅ kalau sudah habis semua pulau, finish
             if (curGateIdx >= regions.length) {
-              endedRef.current = true;
-              setPaused(true);
-              setQuizOpen(false);
-              setFinishOpen(true);
-              try {
-                Telemetry.endSession();
-              } catch {}
-              try {
-                onFinishedRef.current?.();
-              } catch {}
+              endComplexRun("finished");
               rafRef.current = requestAnimationFrame(tick);
               return;
             }

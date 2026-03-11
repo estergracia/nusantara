@@ -88,6 +88,7 @@ export default function Quiz() {
   const [phase, setPhase] = useState("splash");
   const [questions, setQuestions] = useState([]);
   const [idx, setIdx] = useState(0);
+  const [complexEndState, setComplexEndState] = useState(null);
 
   const [picked, setPicked] = useState(undefined);
   const [resultState, setResultState] = useState({});
@@ -318,6 +319,7 @@ export default function Quiz() {
     setIdx(0);
     setPicked(undefined);
     setResultState({});
+    setComplexEndState(null);
     resetTimerForQuestion();
     setPhase("playing");
 
@@ -599,33 +601,202 @@ export default function Quiz() {
   }
 
   async function finalizeModeAndMoveNext() {
-    const modeId = mode.id;
+    const isComplexRun = isComplex && complexEndState?.status === "finished";
+    const prev = stats || {};
 
-    const answered = safeNum(modeRunRef.current.answered);
-    const correct = safeNum(modeRunRef.current.correct);
-    const wrong = safeNum(modeRunRef.current.wrong);
-    const runTimeSec = safeNum(modeRunRef.current.totalTimeSec);
+    let modeId = mode.id;
+    let answered = safeNum(modeRunRef.current.answered);
+    let correct = safeNum(modeRunRef.current.correct);
+    let wrong = safeNum(modeRunRef.current.wrong);
+    let runTimeSec = safeNum(modeRunRef.current.totalTimeSec);
 
-    Telemetry.logEvent("mode_complete", { modeId, modeIndex, answered, correct, wrong, runTimeSec });
+    const prevCampaignByMode = {
+      ...ensureObj(prev?.campaignByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+
+    const prevTimeSumByMode = {
+      ...ensureObj(prev?.timeSumByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevTimeCountByMode = {
+      ...ensureObj(prev?.timeCountByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevCorrectByMode = {
+      ...ensureObj(prev?.correctByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevAnsweredByMode = {
+      ...ensureObj(prev?.answeredByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevAvgTimeByMode = {
+      ...ensureObj(prev?.avgTimeByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevAccuracyByMode = {
+      ...ensureObj(prev?.accuracyByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+    const prevPerfectByMode = {
+      ...ensureObj(prev?.perfectByMode, { easy: 0, normal: 0, hard: 0 }),
+    };
+
+    let nextCampaignByMode = { ...prevCampaignByMode };
+    let timeSumByMode = { ...prevTimeSumByMode };
+    let timeCountByMode = { ...prevTimeCountByMode };
+    let correctByMode = { ...prevCorrectByMode };
+    let answeredByMode = { ...prevAnsweredByMode };
+    let avgTimeByMode = { ...prevAvgTimeByMode };
+    let accuracyByMode = { ...prevAccuracyByMode };
+    let perfectByMode = { ...prevPerfectByMode };
+
+    if (isComplexRun) {
+      modeId = "complex";
+
+      const payloadStats = ensureObj(complexEndState?.payload?.stats, {});
+      const payloadAnsweredByMode = ensureObj(payloadStats?.answeredByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadCorrectByMode = ensureObj(payloadStats?.correctByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadTimeSumByMode = ensureObj(payloadStats?.timeSumByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadTimeCountByMode = ensureObj(payloadStats?.timeCountByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadAvgTimeByMode = ensureObj(payloadStats?.avgTimeByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadAccuracyByMode = ensureObj(payloadStats?.accuracyByMode, { easy: 0, normal: 0, hard: 0 });
+      const payloadPerfectByMode = ensureObj(payloadStats?.perfectByMode, { easy: 0, normal: 0, hard: 0 });
+
+      answered =
+        safeNum(payloadAnsweredByMode.easy) +
+        safeNum(payloadAnsweredByMode.normal) +
+        safeNum(payloadAnsweredByMode.hard);
+
+      correct =
+        safeNum(payloadCorrectByMode.easy) +
+        safeNum(payloadCorrectByMode.normal) +
+        safeNum(payloadCorrectByMode.hard);
+
+      wrong = Math.max(0, answered - correct);
+
+      runTimeSec =
+        safeNum(payloadTimeSumByMode.easy) +
+        safeNum(payloadTimeSumByMode.normal) +
+        safeNum(payloadTimeSumByMode.hard);
+
+      nextCampaignByMode = {
+        ...prevCampaignByMode,
+        easy: Math.max(safeNum(prevCampaignByMode.easy), safeNum(modeEasy.totalQuestions ?? 0)),
+        normal: Math.max(safeNum(prevCampaignByMode.normal), safeNum(modeNormal.totalQuestions ?? 0)),
+        hard: Math.max(safeNum(prevCampaignByMode.hard), safeNum(modeHard.totalQuestions ?? 0)),
+      };
+
+      timeSumByMode = {
+        ...prevTimeSumByMode,
+        easy: safeNum(prevTimeSumByMode.easy) + safeNum(payloadTimeSumByMode.easy),
+        normal: safeNum(prevTimeSumByMode.normal) + safeNum(payloadTimeSumByMode.normal),
+        hard: safeNum(prevTimeSumByMode.hard) + safeNum(payloadTimeSumByMode.hard),
+      };
+
+      timeCountByMode = {
+        ...prevTimeCountByMode,
+        easy: safeNum(prevTimeCountByMode.easy) + safeNum(payloadTimeCountByMode.easy),
+        normal: safeNum(prevTimeCountByMode.normal) + safeNum(payloadTimeCountByMode.normal),
+        hard: safeNum(prevTimeCountByMode.hard) + safeNum(payloadTimeCountByMode.hard),
+      };
+
+      correctByMode = {
+        ...prevCorrectByMode,
+        easy: safeNum(prevCorrectByMode.easy) + safeNum(payloadCorrectByMode.easy),
+        normal: safeNum(prevCorrectByMode.normal) + safeNum(payloadCorrectByMode.normal),
+        hard: safeNum(prevCorrectByMode.hard) + safeNum(payloadCorrectByMode.hard),
+      };
+
+      answeredByMode = {
+        ...prevAnsweredByMode,
+        easy: safeNum(prevAnsweredByMode.easy) + safeNum(payloadAnsweredByMode.easy),
+        normal: safeNum(prevAnsweredByMode.normal) + safeNum(payloadAnsweredByMode.normal),
+        hard: safeNum(prevAnsweredByMode.hard) + safeNum(payloadAnsweredByMode.hard),
+      };
+
+      avgTimeByMode = {
+        ...prevAvgTimeByMode,
+        easy: safeNum(payloadAvgTimeByMode.easy),
+        normal: safeNum(payloadAvgTimeByMode.normal),
+        hard: safeNum(payloadAvgTimeByMode.hard),
+      };
+
+      accuracyByMode = {
+        ...prevAccuracyByMode,
+        easy: clamp01(safeNum(payloadAccuracyByMode.easy)),
+        normal: clamp01(safeNum(payloadAccuracyByMode.normal)),
+        hard: clamp01(safeNum(payloadAccuracyByMode.hard)),
+      };
+
+      perfectByMode = {
+        ...prevPerfectByMode,
+        easy: safeNum(prevPerfectByMode.easy) + safeNum(payloadPerfectByMode.easy),
+        normal: safeNum(prevPerfectByMode.normal) + safeNum(payloadPerfectByMode.normal),
+        hard: safeNum(prevPerfectByMode.hard) + safeNum(payloadPerfectByMode.hard),
+      };
+    } else {
+      const runAvgTimeSec = answered ? runTimeSec / answered : 0;
+      const runAccuracy01 = answered ? correct / answered : 0;
+      const isPerfectRun = answered === safeNum(mode.totalQuestions) && wrong === 0;
+
+      nextCampaignByMode = {
+        ...prevCampaignByMode,
+        [modeId]: Math.max(
+          safeNum(prevCampaignByMode?.[modeId] ?? 0),
+          safeNum(mode.totalQuestions ?? 0)
+        ),
+      };
+
+      timeSumByMode = {
+        ...prevTimeSumByMode,
+        [modeId]: safeNum(prevTimeSumByMode[modeId]) + runTimeSec,
+      };
+
+      timeCountByMode = {
+        ...prevTimeCountByMode,
+        [modeId]: safeNum(prevTimeCountByMode[modeId]) + answered,
+      };
+
+      correctByMode = {
+        ...prevCorrectByMode,
+        [modeId]: safeNum(prevCorrectByMode[modeId]) + correct,
+      };
+
+      answeredByMode = {
+        ...prevAnsweredByMode,
+        [modeId]: safeNum(prevAnsweredByMode[modeId]) + answered,
+      };
+
+      avgTimeByMode = {
+        ...prevAvgTimeByMode,
+        [modeId]: runAvgTimeSec,
+      };
+
+      accuracyByMode = {
+        ...prevAccuracyByMode,
+        [modeId]: clamp01(runAccuracy01),
+      };
+
+      perfectByMode = {
+        ...prevPerfectByMode,
+        [modeId]: isPerfectRun
+          ? safeNum(prevPerfectByMode[modeId]) + 1
+          : safeNum(prevPerfectByMode[modeId]),
+      };
+    }
+
+    Telemetry.logEvent("mode_complete", {
+      modeId,
+      modeIndex,
+      answered,
+      correct,
+      wrong,
+      runTimeSec,
+      isComplexRun,
+    });
 
     const modeScore = correct * safeNum(mode.scoreCorrect) + wrong * safeNum(mode.scoreWrong);
-
-    const prev = stats || {};
 
     const prevAttempt = safeNum(prev?.attemptTotal ?? 0);
     const nextAttempt = prevAttempt + answered;
 
     const prevScoreTotal = safeNum(prev?.scoreTotal ?? prev?.pointsTotal ?? prev?.totalPoints ?? 0);
     const nextScoreTotal = Math.max(0, prevScoreTotal + modeScore);
-
-    const prevCampaignByMode = {
-      ...ensureObj(prev?.campaignByMode, { easy: 0, normal: 0, hard: 0 }),
-    };
-
-    const nextCampaignByMode = {
-      ...prevCampaignByMode,
-      [modeId]: Math.max(safeNum(prevCampaignByMode?.[modeId] ?? 0), safeNum(mode.totalQuestions ?? 0)),
-    };
 
     const globalLevelNow = MODE_CONFIGS.reduce((sum, m) => {
       const got = safeNum(nextCampaignByMode?.[m.id] ?? 0);
@@ -637,36 +808,17 @@ export default function Quiz() {
     const globalLevelMax = Math.max(prevGLMax, globalLevelNow);
 
     let nextStage;
-    if (modeId !== "hard") nextStage = clamp(modeIndex + 1, 0, MODE_CONFIGS.length - 1);
-    else nextStage = 0;
-
-    const timeSumByMode = { ...ensureObj(prev.timeSumByMode, { easy: 0, normal: 0, hard: 0 }) };
-    const timeCountByMode = { ...ensureObj(prev.timeCountByMode, { easy: 0, normal: 0, hard: 0 }) };
-    const correctByMode = { ...ensureObj(prev.correctByMode, { easy: 0, normal: 0, hard: 0 }) };
-    const answeredByMode = { ...ensureObj(prev.answeredByMode, { easy: 0, normal: 0, hard: 0 }) };
-
-    timeSumByMode[modeId] = safeNum(timeSumByMode[modeId]) + runTimeSec;
-    timeCountByMode[modeId] = safeNum(timeCountByMode[modeId]) + answered;
-
-    correctByMode[modeId] = safeNum(correctByMode[modeId]) + correct;
-    answeredByMode[modeId] = safeNum(answeredByMode[modeId]) + answered;
+    if (isComplexRun) {
+      nextStage = 0;
+    } else if (mode.id !== "hard") {
+      nextStage = clamp(modeIndex + 1, 0, MODE_CONFIGS.length - 1);
+    } else {
+      nextStage = 0;
+    }
 
     const totalTimeBefore = safeNum(prev?.avgTimeMs ?? 0) * prevAttempt;
     const totalTimeNow = totalTimeBefore + safeNum(sessionTimeMs);
     const nextAvgMs = nextAttempt ? Math.round(totalTimeNow / nextAttempt) : 0;
-
-    const avgTimeByMode = { ...ensureObj(prev.avgTimeByMode, { easy: 0, normal: 0, hard: 0 }) };
-    const accuracyByMode = { ...ensureObj(prev.accuracyByMode, { easy: 0, normal: 0, hard: 0 }) };
-
-    const runAvgTimeSec = answered ? runTimeSec / answered : 0;
-    const runAccuracy01 = answered ? correct / answered : 0;
-
-    avgTimeByMode[modeId] = runAvgTimeSec;
-    accuracyByMode[modeId] = clamp01(runAccuracy01);
-
-    const perfectByMode = { ...ensureObj(prev.perfectByMode, { easy: 0, normal: 0, hard: 0 }) };
-    const isPerfectRun = answered === safeNum(mode.totalQuestions) && wrong === 0;
-    if (isPerfectRun) perfectByMode[modeId] = safeNum(perfectByMode[modeId]) + 1;
 
     const seen = new Set(ensureArr(prev?.quizUniqueCategories, []));
     for (const qq2 of questions) {
@@ -709,13 +861,13 @@ export default function Quiz() {
 
       lastRunModeStats: {
         ...(ensureObj(prev?.lastRunModeStats, {})),
-        [modeId]: {
+        [isComplexRun ? "complex" : mode.id]: {
           correct,
           wrong,
           answered,
           totalTime: runTimeSec,
-          avgTime: runAvgTimeSec,
-          accuracy: runAccuracy01 * 100,
+          avgTime: answered ? runTimeSec / answered : 0,
+          accuracy: answered ? (correct / answered) * 100 : 0,
         },
       },
 
@@ -726,14 +878,18 @@ export default function Quiz() {
 
     const ctx = {
       modeFinished: true,
-      modeId,
+      modeId: isComplexRun ? "complex" : mode.id,
       globalLevelNow,
-      totalQuestions: mode.totalQuestions,
+      totalQuestions: isComplexRun
+        ? safeNum(modeEasy.totalQuestions ?? 0) +
+          safeNum(modeNormal.totalQuestions ?? 0) +
+          safeNum(modeHard.totalQuestions ?? 0)
+        : safeNum(mode.totalQuestions ?? 0),
       runAnswered: answered,
       runWrong: wrong,
       runCorrect: correct,
-      avgTime: runAvgTimeSec,
-      accuracy: runAccuracy01 * 100,
+      avgTime: answered ? runTimeSec / answered : 0,
+      accuracy: answered ? (correct / answered) * 100 : 0,
     };
 
     const res = runBadgeEngine(nextStats, earnedBefore, ctx);
@@ -748,9 +904,18 @@ export default function Quiz() {
     });
 
     if (newlyUnlocked.length) {
-      queueBadgesAndThen(newlyUnlocked, () => goNextAfterMode(nextStats));
+      queueBadgesAndThen(newlyUnlocked, () => {
+        if (isComplexRun) {
+          setComplexEndState(null);
+        }
+        goNextAfterMode(nextStats);
+      });
       Promise.resolve(updateBadges(nextEarnedIds)).catch((err) => console.error("updateBadges failed:", err));
       return;
+    }
+
+    if (isComplexRun) {
+      setComplexEndState(null);
     }
 
     goNextAfterMode(nextStats);
@@ -1017,8 +1182,14 @@ export default function Quiz() {
                 else playSfx("wrong");
               } catch {}
             }}
-            onFinished={() => setPhase("stageDone")}
-            onGameOver={() => setPhase("stageDone")}
+            onFinished={(payload) => {
+              setComplexEndState({ status: "finished", payload });
+              setPhase("stageDone");
+            }}
+            onGameOver={(payload) => {
+              setComplexEndState({ status: "gameover", payload });
+              setPhase("stageLose");
+            }}
           />
         );
       }
@@ -1161,6 +1332,148 @@ export default function Quiz() {
       </div>
     );
   }
+
+  if (phase === "stageLose") {
+  const cp = cardPropsForPhase();
+
+  const payload = complexEndState?.payload || {};
+  const loseReason = String(payload?.reason || "hp0");
+  const loseGate = safeNum(payload?.gateIndex ?? 0);
+  const loseTotalGates = safeNum(payload?.totalGates ?? 0);
+  const loseHp = safeNum(payload?.hp ?? 0);
+  const loseCoin = safeNum(payload?.coin ?? 0);
+  const loseXp = safeNum(payload?.xp ?? 0);
+  const loseGlobalLevel = safeNum(payload?.globalLevel ?? 0);
+
+  const reasonLabel =
+    loseReason === "hp0"
+      ? "HP habis"
+      : loseReason === "xp0"
+      ? "XP habis"
+      : loseReason === "timeout"
+      ? "Waktu habis"
+      : "Kalah";
+
+  main = (
+    <div className="space-y-4">
+      <section {...cp}>
+        <div className="relative z-10">
+          <div className="text-2xl font-extrabold ui-title">Game Over</div>
+
+          <div className="mt-2 text-sm ui-muted">
+            Petualanganmu di mode complex terhenti.
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">Alasan</div>
+              <div className="mt-1">{reasonLabel}</div>
+            </div>
+
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">Gerbang</div>
+              <div className="mt-1">
+                {loseGate}/{loseTotalGates || "-"}
+              </div>
+            </div>
+
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">Global Level</div>
+              <div className="mt-1">{loseGlobalLevel}</div>
+            </div>
+
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">HP</div>
+              <div className="mt-1">{loseHp}</div>
+            </div>
+
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">Coin</div>
+              <div className="mt-1">{loseCoin}</div>
+            </div>
+
+            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+              <div className="text-sm font-extrabold">XP</div>
+              <div className="mt-1">{loseXp}</div>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="ui-btn ui-btn--primary"
+              onClick={() => {
+                Telemetry.trackClick();
+                Telemetry.trackNavigation();
+                navigate("/home", { replace: true });
+              }}
+            >
+              Kembali ke Home
+            </button>
+
+            <button
+              type="button"
+              className="ui-btn"
+              onClick={() => {
+                Telemetry.trackClick();
+                Telemetry.logEvent("quiz_restart", {
+                  fromPhase: "stageLose",
+                  modeIndexStart: 0,
+                  reason: loseReason,
+                });
+
+                quizHasStartedRef.current = false;
+                sessionStartedRef.current = false;
+                badgeShownRef.current = false;
+                autoStartComplexRef.current = false;
+                initStageRef.current = false;
+
+                setComplexEndState(null);
+                setModeIndex(0);
+                setPhase("splash");
+                setQuestions([]);
+                setIdx(0);
+                setPicked(undefined);
+                setResultState({});
+
+                const mm = MODE_CONFIGS[0] || MODE_CONFIGS[0];
+                const totalMs = (mm.timePerQuestion || 0) * 1000;
+                setTimeLeft(mm.timePerQuestion);
+                setTimeLeftMs(totalMs);
+                deadlineRef.current = Date.now() + totalMs;
+                questionStartAtRef.current = Date.now();
+
+                setSessionScore(0);
+                setSessionCorrect(0);
+                setSessionWrong(0);
+                setSessionTimeMs(0);
+
+                setCurStreak(0);
+                setBestStreak(0);
+
+                modeRunRef.current = { correct: 0, wrong: 0, answered: 0, totalTimeSec: 0 };
+
+                complexBankRef.current = [];
+                complexPtrRef.current = 0;
+
+                easyBankRef.current = [];
+                easyPtrRef.current = 0;
+
+                normalBankRef.current = [];
+                normalPtrRef.current = 0;
+
+                hardBankRef.current = [];
+                hardPtrRef.current = 0;
+              }}
+            >
+              Main Lagi
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
 
   if (phase === "final") {
     const cp = cardPropsForPhase();
