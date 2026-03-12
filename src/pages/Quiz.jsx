@@ -1334,146 +1334,116 @@ export default function Quiz() {
   }
 
   if (phase === "stageLose") {
-  const cp = cardPropsForPhase();
+    const cp = cardPropsForPhase();
 
-  const payload = complexEndState?.payload || {};
-  const loseReason = String(payload?.reason || "hp0");
-  const loseGate = safeNum(payload?.gateIndex ?? 0);
-  const loseTotalGates = safeNum(payload?.totalGates ?? 0);
-  const loseHp = safeNum(payload?.hp ?? 0);
-  const loseCoin = safeNum(payload?.coin ?? 0);
-  const loseXp = safeNum(payload?.xp ?? 0);
-  const loseGlobalLevel = safeNum(payload?.globalLevel ?? 0);
+    const payload = complexEndState?.payload || {};
+    const loseGate = safeNum(payload?.gateIndex ?? 0);
+    const loseTotalGates = safeNum(payload?.totalGates ?? 0);
+    const loseCoin = safeNum(payload?.coin ?? 0);
+    const loseXp = safeNum(payload?.xp ?? 0);
+    const loseReason = String(payload?.reason || "hp0");
 
-  const reasonLabel =
-    loseReason === "hp0"
-      ? "HP habis"
-      : loseReason === "xp0"
-      ? "XP habis"
-      : loseReason === "timeout"
-      ? "Waktu habis"
-      : "Kalah";
+    main = (
+      <div className="space-y-4">
+        <section {...cp}>
+          <div className="relative z-10">
+            <div className="text-2xl font-extrabold ui-title">Game Over</div>
 
-  main = (
-    <div className="space-y-4">
-      <section {...cp}>
-        <div className="relative z-10">
-          <div className="text-2xl font-extrabold ui-title">Game Over</div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+                <div className="text-sm font-extrabold">Gerbang</div>
+                <div className="mt-1">
+                  {loseGate}/{loseTotalGates || "-"}
+                </div>
+              </div>
 
-          <div className="mt-2 text-sm ui-muted">
-            Petualanganmu di mode complex terhenti.
-          </div>
+              <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+                <div className="text-sm font-extrabold">Coin</div>
+                <div className="mt-1">{loseCoin}</div>
+              </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">Alasan</div>
-              <div className="mt-1">{reasonLabel}</div>
-            </div>
-
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">Gerbang</div>
-              <div className="mt-1">
-                {loseGate}/{loseTotalGates || "-"}
+              <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
+                <div className="text-sm font-extrabold">XP</div>
+                <div className="mt-1">{loseXp}</div>
               </div>
             </div>
 
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">Global Level</div>
-              <div className="mt-1">{loseGlobalLevel}</div>
-            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="ui-btn ui-btn--primary"
+                onClick={() => {
+                  Telemetry.trackClick();
+                  Telemetry.trackNavigation();
+                  navigate("/home", { replace: true });
+                }}
+              >
+                Kembali ke Home
+              </button>
 
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">HP</div>
-              <div className="mt-1">{loseHp}</div>
-            </div>
+              <button
+                type="button"
+                className="ui-btn"
+                onClick={() => {
+                  Telemetry.trackClick();
+                  Telemetry.logEvent("quiz_restart", {
+                    fromPhase: "stageLose",
+                    modeIndexStart: 0,
+                    reason: loseReason,
+                  });
 
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">Coin</div>
-              <div className="mt-1">{loseCoin}</div>
-            </div>
+                  quizHasStartedRef.current = false;
+                  sessionStartedRef.current = false;
+                  badgeShownRef.current = false;
+                  autoStartComplexRef.current = false;
+                  initStageRef.current = false;
 
-            <div className="ui-card ui-card--pad" style={{ background: "var(--surface-2)" }}>
-              <div className="text-sm font-extrabold">XP</div>
-              <div className="mt-1">{loseXp}</div>
+                  setComplexEndState(null);
+                  setModeIndex(0);
+                  setPhase("splash");
+                  setQuestions([]);
+                  setIdx(0);
+                  setPicked(undefined);
+                  setResultState({});
+
+                  const mm = MODE_CONFIGS[0] || MODE_CONFIGS[0];
+                  const totalMs = (mm.timePerQuestion || 0) * 1000;
+                  setTimeLeft(mm.timePerQuestion);
+                  setTimeLeftMs(totalMs);
+                  deadlineRef.current = Date.now() + totalMs;
+                  questionStartAtRef.current = Date.now();
+
+                  setSessionScore(0);
+                  setSessionCorrect(0);
+                  setSessionWrong(0);
+                  setSessionTimeMs(0);
+
+                  setCurStreak(0);
+                  setBestStreak(0);
+
+                  modeRunRef.current = { correct: 0, wrong: 0, answered: 0, totalTimeSec: 0 };
+
+                  complexBankRef.current = [];
+                  complexPtrRef.current = 0;
+
+                  easyBankRef.current = [];
+                  easyPtrRef.current = 0;
+
+                  normalBankRef.current = [];
+                  normalPtrRef.current = 0;
+
+                  hardBankRef.current = [];
+                  hardPtrRef.current = 0;
+                }}
+              >
+                Main Lagi
+              </button>
             </div>
           </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="ui-btn ui-btn--primary"
-              onClick={() => {
-                Telemetry.trackClick();
-                Telemetry.trackNavigation();
-                navigate("/home", { replace: true });
-              }}
-            >
-              Kembali ke Home
-            </button>
-
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => {
-                Telemetry.trackClick();
-                Telemetry.logEvent("quiz_restart", {
-                  fromPhase: "stageLose",
-                  modeIndexStart: 0,
-                  reason: loseReason,
-                });
-
-                quizHasStartedRef.current = false;
-                sessionStartedRef.current = false;
-                badgeShownRef.current = false;
-                autoStartComplexRef.current = false;
-                initStageRef.current = false;
-
-                setComplexEndState(null);
-                setModeIndex(0);
-                setPhase("splash");
-                setQuestions([]);
-                setIdx(0);
-                setPicked(undefined);
-                setResultState({});
-
-                const mm = MODE_CONFIGS[0] || MODE_CONFIGS[0];
-                const totalMs = (mm.timePerQuestion || 0) * 1000;
-                setTimeLeft(mm.timePerQuestion);
-                setTimeLeftMs(totalMs);
-                deadlineRef.current = Date.now() + totalMs;
-                questionStartAtRef.current = Date.now();
-
-                setSessionScore(0);
-                setSessionCorrect(0);
-                setSessionWrong(0);
-                setSessionTimeMs(0);
-
-                setCurStreak(0);
-                setBestStreak(0);
-
-                modeRunRef.current = { correct: 0, wrong: 0, answered: 0, totalTimeSec: 0 };
-
-                complexBankRef.current = [];
-                complexPtrRef.current = 0;
-
-                easyBankRef.current = [];
-                easyPtrRef.current = 0;
-
-                normalBankRef.current = [];
-                normalPtrRef.current = 0;
-
-                hardBankRef.current = [];
-                hardPtrRef.current = 0;
-              }}
-            >
-              Main Lagi
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+        </section>
+      </div>
+    );
+  }
 
   if (phase === "final") {
     const cp = cardPropsForPhase();
